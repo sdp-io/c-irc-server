@@ -1,2 +1,2 @@
-# c-irc-client
-A minimal IRC built from scratch in C.
+# c-irc-server
+A minimal IRC server built from scratch in C.
