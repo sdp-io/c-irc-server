@@ -1,4 +1,5 @@
 #include "network.h"
+#include "structs.h"
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -11,32 +12,55 @@
 #include <unistd.h>
 
 /*
+ * Helper function that handles the initialization of the set of polling file
+ * descriptors via malloc, the initialization of the listener socket, as well as
+ * the placement of the subsequent listener socket into the set of polling file
+ * descriptors.
+ */
+int init_pfds(struct pollfd **pfds, int *fd_size, int *fd_count,
+              int *listener) {
+  // Begin with enough room for 5 total connections
+  // When capacity is reached, will realloc()
+  *fd_size = 5;
+  *fd_count = 0;
+
+  *pfds = malloc(sizeof **pfds * (*fd_size));
+
+  // Set up and get a listening socket
+  *listener = get_listener_socket();
+
+  if (*listener == -1) {
+    return -1;
+  }
+
+  // Add the listener to the set of connections.
+  // Report ready to read when receiving an incoming connection
+  (*pfds)[0].fd = *listener;
+  (*pfds)[0].events = POLLIN;
+
+  *fd_count = 1; // Increment to account for the listener.
+
+  return 0;
+}
+
+/*
  * Main: Create a listener socket and a set of file descriptors to poll.
  * Then, loop forever polling/processing connections.
  */
 int main(void) {
   int listener; // Listening socket file descriptor
+  int fd_size;  // Capacity for pfds
+  int fd_count; // Total fds currently in pfds
+  struct pollfd *pfds;
 
-  // Begin with enough room for 5 total connections
-  // When capacity is reached, will realloc()
-  int fd_size = 5;
-  int fd_count = 0;
-  struct pollfd *pfds = malloc(sizeof *pfds * fd_size);
-
-  // Set up and get a listening socket
-  listener = get_listener_socket();
-
-  if (listener == -1) {
+  if (init_pfds(&pfds, &fd_size, &fd_count, &listener) == -1) {
     fprintf(stderr, "main: error getting listening socket\n");
     exit(EXIT_FAILURE);
   }
 
-  // Add the listener to the set of connections.
-  // Report ready to read when receiving an incoming connection
-  pfds[0].fd = listener;
-  pfds[0].events = POLLIN;
-
-  fd_count = 1; // Increment to account for the listener
+  int users_count = 0;
+  struct UserNode *users = NULL; // Will dynamically add to this linked list as
+                                 // we receive connections
 
   puts("pollserver: waiting for connections...");
 
