@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Wpedantic -I./include
-OBJ = src/main.o src/network.o
+OBJ = src/main.o src/network.o src/user.o
 
 circ: $(OBJ)
 	$(CC) $^ -o $@
