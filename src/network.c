@@ -1,3 +1,4 @@
+#include "user.h"
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -142,8 +143,19 @@ void handle_new_connection(int listener, int *fd_count, int *fd_size,
   if (newfd == -1) {
     perror("accept");
   } else {
-    add_to_pfds(pfds, newfd, fd_count,
-                fd_size); // Valid file descriptor, add to pollfds
+    // Add to users list, currently no NICK for user so set to NULL
+    if (add_to_users(newfd, NULL) == -1) {
+      fprintf(stderr, "Server full or OOM, rejecting connection from %d\n",
+              newfd);
+      close(newfd); // Close attempted connection as user malloc failed
+      return;
+
+      // TODO: Send IRC compliant error message to users that fail to connect
+      // due to reasons unrelated to malloc failure.
+    }
+
+    // Valid fd and successfully added to users, therefore add to pfds
+    add_to_pfds(pfds, newfd, fd_count, fd_size);
 
     printf("pollserver: new connection from %s on socket %d\n",
            inet_ntop2(&remoteaddr, remoteIP, sizeof remoteIP), newfd);

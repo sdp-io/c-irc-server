@@ -1,5 +1,4 @@
 #include "network.h"
-#include "structs.h"
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -57,10 +56,6 @@ int main(void) {
     fprintf(stderr, "main: error getting listening socket\n");
     exit(EXIT_FAILURE);
   }
-
-  int users_count = 0;
-  struct UserNode *users = NULL; // Will dynamically add to this linked list as
-                                 // we receive connections
 
   puts("pollserver: waiting for connections...");
 
