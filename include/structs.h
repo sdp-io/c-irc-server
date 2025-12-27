@@ -16,8 +16,8 @@ struct User {
  * users that are currently active on the IRC server.
  */
 struct UserNode {
-  struct User user_info;
-  struct User next;
+  struct User *user_info;
+  struct UserNode *next;
 };
 
 #endif
