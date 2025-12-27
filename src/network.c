@@ -184,6 +184,7 @@ void handle_client_data(int listener, int *fd_count, struct pollfd *pfds,
 
     // Close the client socket and remove from pollfds
     close(sender_fd);
+    del_from_users(sender_fd);
     del_from_pfds(pfds, *pfd_i, fd_count);
 
     // Decrement the pfd iterator to rexamine the slot we just deleted
