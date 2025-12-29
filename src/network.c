@@ -165,9 +165,8 @@ void handle_new_connection(int listener, int *fd_count, int *fd_size,
 /*
  * Handle the receiving of regular client data OR client hangups.
  */
-void handle_client_data(int listener, int *fd_count, struct pollfd *pfds,
-                        int *pfd_i) {
-  char buf[256]; // Buffer for the receiving of client data
+void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
+  char buf[512]; // Buffer for the receiving of client data
 
   int sender_fd = pfds[*pfd_i].fd;
 
@@ -190,18 +189,9 @@ void handle_client_data(int listener, int *fd_count, struct pollfd *pfds,
     // Decrement the pfd iterator to rexamine the slot we just deleted
     (*pfd_i)--;
   } else { // Received some good data from the client
-    printf("pollserver: recv from fd %d: %.*s", sender_fd, nbytes, buf);
-    // Send the received data to everyone else within the pfds
-    for (int j = 0; j < *fd_count; j++) {
-      int destination_fd = pfds[j].fd;
+    printf("pollserver: recv from fd %d: %.*s\n", sender_fd, nbytes, buf);
 
-      // Do not send the data to the listener and sender of the data
-      if (destination_fd != listener && destination_fd != sender_fd) {
-        if (send(destination_fd, buf, nbytes, 0) == -1) {
-          perror("send");
-        }
-      }
-    }
+    handle_user_msg(sender_fd, nbytes, buf);
   }
 }
 
@@ -220,7 +210,7 @@ void process_connections(int listener, int *fd_count, int *fd_size,
         handle_new_connection(listener, fd_count, fd_size, pfds);
       } else {
         // Else it is a client sending data
-        handle_client_data(listener, fd_count, *pfds, &i);
+        handle_client_data(fd_count, *pfds, &i);
       }
     }
   }

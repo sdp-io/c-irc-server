@@ -1,6 +1,7 @@
 #include "structs.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // Linked list of users for the IRC server
 static struct UserNode *users_head = NULL;
@@ -74,8 +75,12 @@ void del_from_users(int user_fd) {
   while (users_iterator != NULL) {
     if (users_iterator->user_info->user_fd == user_fd) {
       prev_node->next = users_iterator->next;
+
+      // Free allocated memory associated with the deleted user
+      free(users_iterator->user_info->nick);
       free(users_iterator->user_info);
       free(users_iterator);
+
       user_count--;
       return;
     }
@@ -87,4 +92,73 @@ void del_from_users(int user_fd) {
   // The specified fd was not found within the list of user fds
   fprintf(stderr, "del_from_users: unable to delete specified user %d\n",
           user_fd);
+}
+
+/*
+ * Handle the setting of a user's nickname on the server. Iterates through
+ * the list of active users on the server to ensure nickname availability.
+ * Frees the memory allocated to the user's previous nickname (if applicable)
+ * then allocates memory to the new nickname and assigns it to the user's
+ * corresponding User struct
+ */
+int set_user_nick(int sender_fd, char *sender_nick) {
+  // TODO: Call a is_valid_nick() helper function?
+  if (sender_nick == NULL) {
+    return -1;
+  }
+
+  // User struct to capture the user after list iteration
+  struct User *sender = NULL;
+  struct User *iterator_user = NULL; // Track user at each list iteration
+
+  struct UserNode *users_iterator = users_head;
+  while (users_iterator != NULL) {
+    // Unpack user_info from current UserNode to make comparisons
+    iterator_user = users_iterator->user_info;
+
+    // Check if current iterators user is same as sender
+    if (iterator_user->user_fd == sender_fd) {
+      sender = iterator_user;
+    }
+
+    // Prevent null comparisons with uninitialized active users in the user list
+    if (iterator_user->nick == NULL) {
+      users_iterator = users_iterator->next;
+      continue;
+    }
+
+    // Compare current iterations user nick to nick param given by sender
+    if ((strcmp(iterator_user->nick, sender_nick)) == 0) {
+      return -1; // TODO: Replace with RFC compliant error code
+    }
+
+    users_iterator = users_iterator->next;
+  }
+
+  printf("set_user_nick: loop exited, allocate nick");
+
+  // If sender has a pre-existing nick, free it.
+  if (sender->nick != NULL) {
+    free(sender->nick);
+    printf("set_user_nick: free'd sender nick\n");
+  }
+
+  // Allocate memory for the new nick
+  sender->nick = strdup(sender_nick);
+  return 0;
+}
+
+/*
+ * Receive a user message and normalize it, trimming carriage returns and
+ * using spaces as a delimiter to extract commands and tokens to dispatch
+ * to their respective handler functions.
+ */
+void handle_user_msg(int sender_fd, char *buf) {
+
+  char *user_cmd = strtok(buf, " \r\n");
+
+  if ((strcasecmp(user_cmd, "NICK")) == 0) {
+    char *nick_param = strtok(NULL, " \r\n");
+    set_user_nick(sender_fd, nick_param);
+  }
 }
