@@ -153,6 +153,11 @@ int set_user_nick(int sender_fd, char *sender_nick) {
 void handle_user_msg(int sender_fd, char *buf) {
   char *user_cmd = strtok(buf, " \r\n");
 
+  // Check if only received carriage return from user
+  if (user_cmd == NULL) {
+    return;
+  }
+
   if ((strcasecmp(user_cmd, "NICK")) == 0) {
     char *nick_param = strtok(NULL, " \r\n");
     set_user_nick(sender_fd, nick_param);
