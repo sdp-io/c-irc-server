@@ -5,7 +5,7 @@ extern int add_to_users(int user_fd, char *user_nick);
 
 extern void del_from_users(int user_fd);
 
-extern void handle_user_msg(int sender_fd, int nbytes, char *buf);
+extern void handle_user_msg(int sender_fd, char *buf);
 
 extern int set_user_nick(int sender_fd, char *sender_nick);
 

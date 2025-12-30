@@ -1,6 +1,8 @@
 #ifndef STRUCTS_H
 #define STRUCTS_H
 
+#define MAX_NICK_LEN 30
+
 /*
  * Struct containing information for a user currently on the IRC server.
  * Allows for ease of nickname verification and messaging capabilities.

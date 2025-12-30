@@ -1,4 +1,5 @@
 #include "structs.h"
+#include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -102,8 +103,7 @@ void del_from_users(int user_fd) {
  * corresponding User struct
  */
 int set_user_nick(int sender_fd, char *sender_nick) {
-  // TODO: Call a is_valid_nick() helper function?
-  if (sender_nick == NULL) {
+  if (!is_valid_nick(sender_nick)) {
     return -1;
   }
 
@@ -135,12 +135,9 @@ int set_user_nick(int sender_fd, char *sender_nick) {
     users_iterator = users_iterator->next;
   }
 
-  printf("set_user_nick: loop exited, allocate nick");
-
   // If sender has a pre-existing nick, free it.
   if (sender->nick != NULL) {
     free(sender->nick);
-    printf("set_user_nick: free'd sender nick\n");
   }
 
   // Allocate memory for the new nick
@@ -154,7 +151,6 @@ int set_user_nick(int sender_fd, char *sender_nick) {
  * to their respective handler functions.
  */
 void handle_user_msg(int sender_fd, char *buf) {
-
   char *user_cmd = strtok(buf, " \r\n");
 
   if ((strcasecmp(user_cmd, "NICK")) == 0) {
