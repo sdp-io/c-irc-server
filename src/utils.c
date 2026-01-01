@@ -1,6 +1,8 @@
 #include "structs.h"
 #include <ctype.h>
+#include <stdarg.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 
 /*
@@ -36,4 +38,18 @@ int is_valid_nick(char *nick) {
   }
 
   return true;
+}
+
+/*
+ * Given a global numeric reply macro, formats the
+ * string based on its matching corresponding args and write it to the provided
+ * buffer param.
+ */
+void format_reply(char *buf, int bufsize, char *format, ...) {
+  va_list arg_ptr;
+  va_start(arg_ptr, format);
+
+  vsnprintf(buf, bufsize, format, arg_ptr);
+
+  va_end(arg_ptr);
 }

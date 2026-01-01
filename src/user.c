@@ -1,3 +1,4 @@
+#include "network.h"
 #include "structs.h"
 #include "utils.h"
 #include <stdio.h>
@@ -9,6 +10,23 @@ static struct UserNode *users_head = NULL;
 
 // Count of users currently active on the IRC Server
 static int user_count = 0;
+
+struct User *get_user(int query_fd) {
+  struct UserNode *users_iterator = users_head;
+  struct User *iterator_user = NULL;
+
+  while (users_iterator != NULL) {
+    iterator_user = users_iterator->user_info;
+
+    if (iterator_user->user_fd == query_fd) {
+      break;
+    }
+
+    users_iterator = users_iterator->next;
+  }
+
+  return iterator_user;
+}
 
 /*
  * Given a user file descriptor and string denoting the user's nickname,
@@ -103,7 +121,20 @@ void del_from_users(int user_fd) {
  * corresponding User struct
  */
 int set_user_nick(int sender_fd, char *sender_nick) {
+  // Buffer to send the corresponding numeric reply back to the sending user
+  char reply_buf[BUF_SIZE];
+
+  // If nick contains invalid characters, do not need to verify its availability
   if (!is_valid_nick(sender_nick)) {
+    // Format and send ERR_ERRONEOUSNICKNAME numeric reply
+    struct User *sender_user = get_user(sender_fd);
+    char *current_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
+
+    format_reply(reply_buf, BUF_SIZE, ERR_ERRONEOUSNICKNAME, SERVER_NAME,
+                 current_nick, sender_nick);
+
+    send_numeric_reply(sender_fd, reply_buf, sizeof(reply_buf));
+
     return -1;
   }
 
@@ -111,6 +142,8 @@ int set_user_nick(int sender_fd, char *sender_nick) {
   struct User *sender = NULL;
   struct User *iterator_user = NULL; // Track user at each list iteration
 
+  // Get the sender's User struct from the list of active users
+  // AND check if sender's nick is taken
   struct UserNode *users_iterator = users_head;
   while (users_iterator != NULL) {
     // Unpack user_info from current UserNode to make comparisons
@@ -128,8 +161,14 @@ int set_user_nick(int sender_fd, char *sender_nick) {
     }
 
     // Compare current iterations user nick to nick param given by sender
-    if ((strcmp(iterator_user->nick, sender_nick)) == 0) {
-      return -1; // TODO: Replace with RFC compliant error code
+    if ((strcasecmp(iterator_user->nick, sender_nick)) == 0) {
+      // Specified nick is taken, format and send ERR_NICKNAMEINUSE numeric
+      format_reply(reply_buf, BUF_SIZE, ERR_NICKNAMEINUSE, SERVER_NAME,
+                   iterator_user->nick, sender_nick);
+
+      send_numeric_reply(sender_fd, reply_buf, sizeof(reply_buf));
+
+      return -1;
     }
 
     users_iterator = users_iterator->next;

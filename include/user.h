@@ -9,4 +9,6 @@ extern void handle_user_msg(int sender_fd, char *buf);
 
 extern int set_user_nick(int sender_fd, char *sender_nick);
 
+extern struct User *get_user(int query_fd);
+
 #endif

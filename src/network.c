@@ -1,8 +1,10 @@
+#include "structs.h"
 #include "user.h"
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <poll.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -166,7 +168,7 @@ void handle_new_connection(int listener, int *fd_count, int *fd_size,
  * Handle the receiving of regular client data OR client hangups.
  */
 void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
-  char buf[512]; // Buffer for the receiving of client data
+  char buf[BUF_SIZE]; // Buffer for the receiving of client data
 
   int sender_fd = pfds[*pfd_i].fd;
 
@@ -213,5 +215,18 @@ void process_connections(int listener, int *fd_count, int *fd_size,
         handle_client_data(fd_count, *pfds, &i);
       }
     }
+  }
+}
+
+/*
+ * Given a buffer containing a corresponding numeric reply,
+ * attempt to send the reply to the specified file descriptor.
+ */
+void send_numeric_reply(int fd, char *buf, size_t size) {
+  int NO_FLAGS = 0;
+
+  if (send(fd, buf, size, NO_FLAGS) == -1) {
+    fprintf(stderr, "send_numeric_reply: failed to send %zu bytes to fd %d\n",
+            size, fd);
   }
 }

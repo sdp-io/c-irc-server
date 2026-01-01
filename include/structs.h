@@ -1,7 +1,17 @@
 #ifndef STRUCTS_H
 #define STRUCTS_H
 
+#define BUF_SIZE 512
+
 #define MAX_NICK_LEN 30
+
+#define SERVER_NAME "localhost"
+
+// TODO: Add documentation
+#define ERR_NICKNAMEINUSE ":%s 433 %s %s :Nickname is already in use\r\n"
+
+// TODO: Add documentation
+#define ERR_ERRONEOUSNICKNAME ":%s 432 %s %s :Erroneous nickname\r\n"
 
 /*
  * Struct containing information for a user currently on the IRC server.

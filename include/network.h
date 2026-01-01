@@ -3,6 +3,7 @@
 
 #include <poll.h>
 #include <stddef.h>
+#include <sys/types.h>
 
 extern char *inet_ntop2(void *addr, char *buf, size_t size);
 
@@ -21,5 +22,7 @@ extern void handle_client_data(int listener, int *fd_count, struct pollfd *pfds,
 
 extern void process_connections(int listener, int *fd_count, int *fd_size,
                                 struct pollfd **pfds);
+
+extern void send_numeric_reply(int sender_fd, char *reply_buf, u_int size);
 
 #endif
