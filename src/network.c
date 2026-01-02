@@ -146,7 +146,7 @@ void handle_new_connection(int listener, int *fd_count, int *fd_size,
     perror("accept");
   } else {
     // Add to users list, currently no NICK for user so set to NULL
-    if (add_to_users(newfd, NULL) == -1) {
+    if (add_to_users(newfd) == -1) {
       fprintf(stderr, "Server full or OOM, rejecting connection from %d\n",
               newfd);
       close(newfd); // Close attempted connection as user malloc failed

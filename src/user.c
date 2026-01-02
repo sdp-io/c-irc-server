@@ -1,6 +1,7 @@
 #include "network.h"
 #include "structs.h"
 #include "utils.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,7 +34,7 @@ struct User *get_user(int query_fd) {
  * allocates memory for a User struct with the provided information and adds it
  * to the list of users currently active on the IRC server.
  */
-int add_to_users(int user_fd, char *user_nick) {
+int add_to_users(int user_fd) {
   // Initialize new user to add to linked list of users
   // based on provided parameters
   struct User *new_user = malloc(sizeof(struct User));
@@ -41,8 +42,13 @@ int add_to_users(int user_fd, char *user_nick) {
     fprintf(stderr, "add_to_users: error allocating memory for new user\n");
     return -1;
   }
-  new_user->nick = user_nick;
+  new_user->nick = NULL;
+  new_user->user_name = NULL;
+  new_user->real_name = NULL;
   new_user->user_fd = user_fd;
+  new_user->has_nick = false;
+  new_user->has_username = false;
+  new_user->is_registered = false;
 
   // Store in memory the UserNode container to store the user
   struct UserNode *new_user_node = malloc(sizeof(struct UserNode));
@@ -179,9 +185,59 @@ int set_user_nick(int sender_fd, char *sender_nick) {
     free(sender->nick);
   }
 
-  // Allocate memory for the new nick
+  // Allocate memory for the new nick and update user state
   sender->nick = strdup(sender_nick);
+  sender->has_nick = true;
+
+  bool has_nick = sender->has_nick;
+  bool has_username = sender->has_username;
+
+  // User successfully registered
+  if (has_nick && has_username) {
+    sender->is_registered = true;
+  }
+
   return 0;
+}
+
+/*
+ * Handle the setting of a user's username on the server. Handles the sending of
+ * the numeric reply ERR_ALREADYREGISTERED when the sending user has a
+ * pre-existing username and real name. Allocates memory to the newly
+ * provided username and real name and assigns them to the corresponding User
+ * struct for the sending user.
+ */
+void set_user_username(int sender_fd, char *user_param, char *mode_param,
+                       char *realname_param) {
+  // Verify integrity of the provided parameters
+  if (user_param == NULL || mode_param == NULL || realname_param == NULL) {
+    return;
+  }
+
+  struct User *sender_user = get_user(sender_fd);
+
+  // Sending user has a pre-existing username, format and send numeric reply
+  if (sender_user->user_name != NULL || sender_user->real_name != NULL) {
+    char reply_buf[BUF_SIZE];
+    char *current_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
+    format_reply(reply_buf, BUF_SIZE, ERR_ALREADYREGISTERED, SERVER_NAME,
+                 current_nick);
+    send_numeric_reply(sender_fd, reply_buf, sizeof(reply_buf));
+    return;
+  }
+
+  // Adjust state of sending user's User struct
+  sender_user->user_name = strdup(user_param);
+  sender_user->real_name = strdup(realname_param);
+  sender_user->has_username = true;
+
+  bool has_nick = sender_user->has_nick;
+  bool has_username = sender_user->has_username;
+
+  // User successfully registered
+  if (has_nick && has_username) {
+    sender_user->is_registered = true;
+  }
 }
 
 /*
@@ -200,5 +256,13 @@ void handle_user_msg(int sender_fd, char *buf) {
   if ((strcasecmp(user_cmd, "NICK")) == 0) {
     char *nick_param = strtok(NULL, " \r\n");
     set_user_nick(sender_fd, nick_param);
+  }
+
+  if ((strcasecmp(user_cmd, "USER")) == 0) {
+    char *user_param = strtok(NULL, " \r\n");
+    char *mode_param = strtok(NULL, " \r\n");
+    strtok(NULL, " \r\n"); // Skip the unused 'server' param (RFC 1459)
+    char *realname_param = strtok(NULL, ":\r\n");
+    set_user_username(sender_fd, user_param, mode_param, realname_param);
   }
 }
