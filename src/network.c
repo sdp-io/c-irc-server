@@ -146,7 +146,8 @@ void handle_new_connection(int listener, int *fd_count, int *fd_size,
     perror("accept");
   } else {
     // Add to users list, currently no NICK for user so set to NULL
-    if (add_to_users(newfd) == -1) {
+    inet_ntop2(&remoteaddr, remoteIP, sizeof remoteIP);
+    if (add_to_users(newfd, remoteIP) == -1) {
       fprintf(stderr, "Server full or OOM, rejecting connection from %d\n",
               newfd);
       close(newfd); // Close attempted connection as user malloc failed
@@ -159,8 +160,8 @@ void handle_new_connection(int listener, int *fd_count, int *fd_size,
     // Valid fd and successfully added to users, therefore add to pfds
     add_to_pfds(pfds, newfd, fd_count, fd_size);
 
-    printf("pollserver: new connection from %s on socket %d\n",
-           inet_ntop2(&remoteaddr, remoteIP, sizeof remoteIP), newfd);
+    printf("pollserver: new connection from %s on socket %d\n", remoteIP,
+           newfd);
   }
 }
 

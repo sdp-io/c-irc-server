@@ -1,7 +1,7 @@
 #ifndef USER_H
 #define USER_H
 
-extern int add_to_users(int user_fd);
+extern int add_to_users(int user_fd, char *user_host);
 
 extern void del_from_users(int user_fd);
 

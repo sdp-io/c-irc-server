@@ -10,6 +10,10 @@
 #define SERVER_NAME "localhost"
 
 // TODO: Add documentation
+#define RPL_WELCOME                                                            \
+  ":%s 001 %s :Welcome to the Internet Relay Network %s!%s@%s\r\n"
+
+// TODO: Add documentation
 #define ERR_NICKNAMEINUSE ":%s 433 %s %s :Nickname is already in use\r\n"
 
 // TODO: Add documentation
@@ -24,6 +28,7 @@
  * Allows for ease of nickname verification and messaging capabilities.
  */
 struct User {
+  char *host_name;
   char *user_name;
   char *real_name;
   char *nick;

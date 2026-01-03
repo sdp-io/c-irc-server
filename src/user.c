@@ -34,7 +34,7 @@ struct User *get_user(int query_fd) {
  * allocates memory for a User struct with the provided information and adds it
  * to the list of users currently active on the IRC server.
  */
-int add_to_users(int user_fd) {
+int add_to_users(int user_fd, char *user_host) {
   // Initialize new user to add to linked list of users
   // based on provided parameters
   struct User *new_user = malloc(sizeof(struct User));
@@ -42,7 +42,16 @@ int add_to_users(int user_fd) {
     fprintf(stderr, "add_to_users: error allocating memory for new user\n");
     return -1;
   }
+
+  char *host_name = strdup(user_host);
+  if (host_name == NULL) {
+    fprintf(stderr,
+            "add_to_users: error allocating memory for user host name\n");
+    return -1;
+  }
+
   new_user->nick = NULL;
+  new_user->host_name = host_name;
   new_user->user_name = NULL;
   new_user->real_name = NULL;
   new_user->user_fd = user_fd;
@@ -103,6 +112,9 @@ void del_from_users(int user_fd) {
 
       // Free allocated memory associated with the deleted user
       free(users_iterator->user_info->nick);
+      free(users_iterator->user_info->user_name);
+      free(users_iterator->user_info->real_name);
+      free(users_iterator->user_info->host_name);
       free(users_iterator->user_info);
       free(users_iterator);
 
@@ -191,10 +203,21 @@ int set_user_nick(int sender_fd, char *sender_nick) {
 
   bool has_nick = sender->has_nick;
   bool has_username = sender->has_username;
+  bool is_registered = sender->is_registered;
 
-  // User successfully registered
-  if (has_nick && has_username) {
+  // User successfully registered, change registration status and send
+  // RPL_WELCOME
+  if (has_nick && has_username && !is_registered) {
     sender->is_registered = true;
+
+    char *nick = sender->nick;
+    char *username = sender->user_name;
+    char *host_name = sender->host_name;
+
+    char reply_buf[BUF_SIZE];
+    format_reply(reply_buf, BUF_SIZE, RPL_WELCOME, SERVER_NAME, nick, nick,
+                 username, host_name);
+    send_numeric_reply(sender_fd, reply_buf, sizeof(reply_buf));
   }
 
   return 0;
@@ -233,10 +256,21 @@ void set_user_username(int sender_fd, char *user_param, char *mode_param,
 
   bool has_nick = sender_user->has_nick;
   bool has_username = sender_user->has_username;
+  bool is_registerd = sender_user->is_registered;
 
-  // User successfully registered
-  if (has_nick && has_username) {
+  // User successfully registered, change registration status and send
+  // RPL_WELCOME
+  if (has_nick && has_username && !is_registerd) {
     sender_user->is_registered = true;
+
+    char *nick = sender_user->nick;
+    char *username = sender_user->user_name;
+    char *host_name = sender_user->host_name;
+
+    char reply_buf[BUF_SIZE];
+    format_reply(reply_buf, BUF_SIZE, RPL_WELCOME, SERVER_NAME, nick, nick,
+                 username, host_name);
+    send_numeric_reply(sender_fd, reply_buf, sizeof(reply_buf));
   }
 }
 
