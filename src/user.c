@@ -181,8 +181,10 @@ int set_user_nick(int sender_fd, char *sender_nick) {
     // Compare current iterations user nick to nick param given by sender
     if ((strcasecmp(iterator_user->nick, sender_nick)) == 0) {
       // Specified nick is taken, format and send ERR_NICKNAMEINUSE numeric
+      char *current_nick = (sender->nick != NULL) ? sender->nick : "*";
+
       format_reply(reply_buf, BUF_SIZE, ERR_NICKNAMEINUSE, SERVER_NAME,
-                   iterator_user->nick, sender_nick);
+                   current_nick, sender_nick);
       send_numeric_reply(sender_fd, reply_buf, strlen(reply_buf));
 
       return -1;
