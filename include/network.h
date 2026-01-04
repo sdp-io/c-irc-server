@@ -22,6 +22,11 @@ extern int get_listener_socket(void);
 extern void add_to_pfds(struct pollfd **pfds, int newfd, int *fd_count,
                         int *fd_size);
 
+/*
+ * Removes a file descriptor at index i from the set of file descriptors
+ * currently being polled by replacing it with the last element and
+ * decrementing the count by one.
+ */
 extern void del_from_pfds(struct pollfd pfds[], int i, int *fd_count);
 
 /*
