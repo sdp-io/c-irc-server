@@ -23,12 +23,7 @@ int is_valid_first_char(char letter) {
   return false;
 }
 
-/*
- * Given a nickname string, confirms that the string is not null, contains
- * a valid first character, and does not exceed the MAX_NICK_LEN.
- */
 int is_valid_nick(char *nick) {
-  // TODO: Replace bools with RFC compliant reply codes
   if ((nick == NULL) || !is_valid_first_char(nick[0])) {
     return false;
   }
@@ -40,11 +35,6 @@ int is_valid_nick(char *nick) {
   return true;
 }
 
-/*
- * Given a global numeric reply macro, formats the
- * string based on its matching corresponding args and write it to the provided
- * buffer param.
- */
 void format_reply(char *buf, int bufsize, char *format, ...) {
   va_list arg_ptr;
   va_start(arg_ptr, format);

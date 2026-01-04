@@ -15,9 +15,6 @@
 
 #define PORT "9034" // Defined port that we will be listening on
 
-/*
- * Convert an IPv4 or IPv6 socket to a readable presentation string.
- */
 const char *inet_ntop2(void *addr, char *buf, size_t size) {
   // Initialize sockaddr_storage for passed socket param, as well as for IPv4
   // and IPv6 types
@@ -44,9 +41,6 @@ const char *inet_ntop2(void *addr, char *buf, size_t size) {
   return inet_ntop(sas->ss_family, src, buf, size);
 }
 
-/*
- * Return a listening socket.
- */
 int get_listener_socket(void) {
   int listener; // Descriptor for the listening socket
   int yes = 1;  // Flag for setsocktopt() SO_REUSEADDR
@@ -103,9 +97,6 @@ int get_listener_socket(void) {
   return listener;
 }
 
-/*
- * Add a new file descriptor to the set of poll file descriptor
- */
 void add_to_pfds(struct pollfd **pfds, int newfd, int *fd_count, int *fd_size) {
   // If the poll file descriptor set is at max capacity, allocate more space
   if (*fd_count == *fd_size) {
@@ -129,9 +120,6 @@ void del_from_pfds(struct pollfd pfds[], int i, int *fd_count) {
   (*fd_count)--;
 }
 
-/*
- * Handle new incoming connections.
- */
 void handle_new_connection(int listener, int *fd_count, int *fd_size,
                            struct pollfd **pfds) {
   struct sockaddr_storage remoteaddr; // Incoming address
@@ -152,9 +140,6 @@ void handle_new_connection(int listener, int *fd_count, int *fd_size,
               newfd);
       close(newfd); // Close attempted connection as user malloc failed
       return;
-
-      // TODO: Send IRC compliant error message to users that fail to connect
-      // due to reasons unrelated to malloc failure.
     }
 
     // Valid fd and successfully added to users, therefore add to pfds
@@ -165,9 +150,6 @@ void handle_new_connection(int listener, int *fd_count, int *fd_size,
   }
 }
 
-/*
- * Handle the receiving of regular client data OR client hangups.
- */
 void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
   char buf[BUF_SIZE]; // Buffer for the receiving of client data
 
@@ -198,9 +180,6 @@ void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
   }
 }
 
-/*
- * Process/poll all existing connections currently within the set of pollfds
- */
 void process_connections(int listener, int *fd_count, int *fd_size,
                          struct pollfd **pfds) {
   for (int i = 0; i < *fd_count; i++) {
@@ -219,10 +198,6 @@ void process_connections(int listener, int *fd_count, int *fd_size,
   }
 }
 
-/*
- * Given a buffer containing a corresponding numeric reply,
- * attempt to send the reply to the specified file descriptor.
- */
 void send_numeric_reply(int fd, char *buf, size_t size) {
   int NO_FLAGS = 0;
 

@@ -29,11 +29,6 @@ struct User *get_user(int query_fd) {
   return iterator_user;
 }
 
-/*
- * Given a user file descriptor and string denoting the user's nickname,
- * allocates memory for a User struct with the provided information and adds it
- * to the list of users currently active on the IRC server.
- */
 int add_to_users(int user_fd, char *user_host) {
   // Initialize new user to add to linked list of users
   // based on provided parameters
@@ -77,12 +72,6 @@ int add_to_users(int user_fd, char *user_host) {
   return 0;
 }
 
-/*
- * Given a user file descriptor to delete, searches the list of users currently
- * active on the IRC server for the matching file descriptor. Once found, frees
- * the memory allocated to the corresponding user and decrements the count of
- * users currently active on the server.
- */
 void del_from_users(int user_fd) {
   struct UserNode *users_iterator = users_head;
 
@@ -131,13 +120,6 @@ void del_from_users(int user_fd) {
           user_fd);
 }
 
-/*
- * Handle the setting of a user's nickname on the server. Iterates through
- * the list of active users on the server to ensure nickname availability.
- * Frees the memory allocated to the user's previous nickname (if applicable)
- * then allocates memory to the new nickname and assigns it to the user's
- * corresponding User struct
- */
 int set_user_nick(int sender_fd, char *sender_nick) {
   // Buffer to send the corresponding numeric reply back to the sending user
   char reply_buf[BUF_SIZE];
@@ -224,13 +206,6 @@ int set_user_nick(int sender_fd, char *sender_nick) {
   return 0;
 }
 
-/*
- * Handle the setting of a user's username on the server. Handles the sending of
- * the numeric reply ERR_ALREADYREGISTERED when the sending user has a
- * pre-existing username and real name. Allocates memory to the newly
- * provided username and real name and assigns them to the corresponding User
- * struct for the sending user.
- */
 void set_user_username(int sender_fd, char *user_param, char *mode_param,
                        char *realname_param) {
   // Verify integrity of the provided parameters
@@ -275,11 +250,6 @@ void set_user_username(int sender_fd, char *user_param, char *mode_param,
   }
 }
 
-/*
- * Receive a user message and normalize it, trimming carriage returns and
- * using spaces as a delimiter to extract commands and tokens to dispatch
- * to their respective handler functions.
- */
 void handle_user_msg(int sender_fd, char *buf) {
   char *user_cmd = strtok(buf, " \r\n");
 
