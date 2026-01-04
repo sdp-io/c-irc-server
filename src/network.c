@@ -111,9 +111,6 @@ void add_to_pfds(struct pollfd **pfds, int newfd, int *fd_count, int *fd_size) {
   (*fd_count)++;
 }
 
-/*
- * Add a new file descriptor to the set of poll file descriptor.
- */
 void del_from_pfds(struct pollfd pfds[], int i, int *fd_count) {
   // Copy the last file descriptor to the current index and decrement fd_count
   pfds[i] = pfds[*fd_count - 1];
