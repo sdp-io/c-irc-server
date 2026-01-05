@@ -1,3 +1,4 @@
+#include "messages.h"
 #include "network.h"
 #include "structs.h"
 #include "utils.h"
