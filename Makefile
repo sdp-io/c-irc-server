@@ -1,7 +1,8 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Wpedantic -I./include
 LDFLAGS =
-OBJ = src/main.o src/network.o src/user.o src/utils.o
+SRCS = $(wildcard src/*.c)
+OBJ = $(SRCS:.c=.o)
 
 all: circ
 

@@ -1,3 +1,4 @@
+#include "command.h"
 #include "structs.h"
 #include "user.h"
 #include <arpa/inet.h>

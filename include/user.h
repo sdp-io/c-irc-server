@@ -19,13 +19,6 @@ extern int add_to_users(int user_fd, char *user_host);
 extern void del_from_users(int user_fd);
 
 /*
- * Receive a user message and normalize it, trimming carriage returns and
- * using spaces as a delimiter to extract commands and tokens to dispatch
- * to their respective handler functions.
- */
-extern void handle_user_msg(int sender_fd, char *buf);
-
-/*
  * Handle the setting of a user's nickname on the server. Iterates through
  * the list of active users on the server to ensure nickname availability.
  * Frees the memory allocated to the user's previous nickname (if applicable)

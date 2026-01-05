@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 // Linked list of users for the IRC server
 static struct UserNode *users_head = NULL;
@@ -12,7 +13,7 @@ static struct UserNode *users_head = NULL;
 // Count of users currently active on the IRC Server
 static int user_count = 0;
 
-struct User *get_user(int query_fd) {
+struct User *get_user_by_fd(int query_fd) {
   struct UserNode *users_iterator = users_head;
   struct User *iterator_user = NULL;
 
@@ -20,13 +21,37 @@ struct User *get_user(int query_fd) {
     iterator_user = users_iterator->user_info;
 
     if (iterator_user->user_fd == query_fd) {
-      break;
+      return iterator_user;
     }
 
     users_iterator = users_iterator->next;
   }
+  // Queried user not found
+  return NULL;
+}
 
-  return iterator_user;
+struct User *get_user_by_nick(char *query_nick) {
+  struct UserNode *users_iterator = users_head;
+  struct User *iterator_user = NULL;
+  char *iterator_user_nick = NULL;
+
+  while (users_iterator != NULL) {
+    iterator_user = users_iterator->user_info;
+    iterator_user_nick = iterator_user->nick;
+
+    // Skip all iterations with NULL nicknames
+    if (iterator_user_nick == NULL) {
+      users_iterator = users_iterator->next;
+      continue;
+    }
+
+    if (strcasecmp(query_nick, iterator_user_nick) == 0) {
+      return iterator_user;
+    }
+  }
+
+  // Queried user not found
+  return NULL;
 }
 
 int add_to_users(int user_fd, char *user_host) {
@@ -127,7 +152,7 @@ int set_user_nick(int sender_fd, char *sender_nick) {
   // If nick contains invalid characters, do not need to verify its availability
   if (!is_valid_nick(sender_nick)) {
     // Format and send ERR_ERRONEOUSNICKNAME numeric reply
-    struct User *sender_user = get_user(sender_fd);
+    struct User *sender_user = get_user_by_fd(sender_fd);
     char *current_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
 
     format_reply(reply_buf, BUF_SIZE, ERR_ERRONEOUSNICKNAME, SERVER_NAME,
@@ -213,7 +238,7 @@ void set_user_username(int sender_fd, char *user_param, char *mode_param,
     return;
   }
 
-  struct User *sender_user = get_user(sender_fd);
+  struct User *sender_user = get_user_by_fd(sender_fd);
 
   // Sending user has a pre-existing username, format and send numeric reply
   if (sender_user->user_name != NULL || sender_user->real_name != NULL) {
@@ -247,27 +272,5 @@ void set_user_username(int sender_fd, char *user_param, char *mode_param,
     format_reply(reply_buf, BUF_SIZE, RPL_WELCOME, SERVER_NAME, nick, nick,
                  username, host_name);
     send_numeric_reply(sender_fd, reply_buf, strlen(reply_buf));
-  }
-}
-
-void handle_user_msg(int sender_fd, char *buf) {
-  char *user_cmd = strtok(buf, " \r\n");
-
-  // Check if only received carriage return from user
-  if (user_cmd == NULL) {
-    return;
-  }
-
-  if ((strcasecmp(user_cmd, "NICK")) == 0) {
-    char *nick_param = strtok(NULL, " \r\n");
-    set_user_nick(sender_fd, nick_param);
-  }
-
-  if ((strcasecmp(user_cmd, "USER")) == 0) {
-    char *user_param = strtok(NULL, " \r\n");
-    char *mode_param = strtok(NULL, " \r\n");
-    strtok(NULL, " \r\n"); // Skip the unused 'server' param (RFC 1459)
-    char *realname_param = strtok(NULL, ":\r\n");
-    set_user_username(sender_fd, user_param, mode_param, realname_param);
   }
 }
