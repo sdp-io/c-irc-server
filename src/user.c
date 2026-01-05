@@ -49,6 +49,8 @@ struct User *get_user_by_nick(char *query_nick) {
     if (strcasecmp(query_nick, iterator_user_nick) == 0) {
       return iterator_user;
     }
+
+    users_iterator = users_iterator->next;
   }
 
   // Queried user not found
