@@ -8,4 +8,8 @@
  */
 extern void handle_user_msg(int sender_fd, char *buf);
 
+// TODO: Add documentation
+extern int handle_privmsg_cmd(int sender_fd, char *recipient_nick,
+                              char *message);
+
 #endif

@@ -52,9 +52,9 @@ extern void process_connections(int listener, int *fd_count, int *fd_size,
                                 struct pollfd **pfds);
 
 /*
- * Given a buffer containing a corresponding numeric reply (RFC 2812),
- * attempt to send the reply to the specified file descriptor.
+ * Given a buffer containing a corresponding reply (RFC 2812)
+ * or message, attempt to send it to the specified file descriptor.
  */
-extern void send_numeric_reply(int sender_fd, char *reply_buf, u_int size);
+extern void send_string(int sender_fd, char *reply_buf, u_int size);
 
 #endif

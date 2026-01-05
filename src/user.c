@@ -161,7 +161,7 @@ int set_user_nick(int sender_fd, char *sender_nick) {
     format_reply(reply_buf, BUF_SIZE, ERR_ERRONEOUSNICKNAME, SERVER_NAME,
                  current_nick, sender_nick);
 
-    send_numeric_reply(sender_fd, reply_buf, strlen(reply_buf));
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
 
     return -1;
   }
@@ -195,7 +195,7 @@ int set_user_nick(int sender_fd, char *sender_nick) {
 
       format_reply(reply_buf, BUF_SIZE, ERR_NICKNAMEINUSE, SERVER_NAME,
                    current_nick, sender_nick);
-      send_numeric_reply(sender_fd, reply_buf, strlen(reply_buf));
+      send_string(sender_fd, reply_buf, strlen(reply_buf));
 
       return -1;
     }
@@ -228,7 +228,7 @@ int set_user_nick(int sender_fd, char *sender_nick) {
     char reply_buf[BUF_SIZE];
     format_reply(reply_buf, BUF_SIZE, RPL_WELCOME, SERVER_NAME, nick, nick,
                  username, host_name);
-    send_numeric_reply(sender_fd, reply_buf, strlen(reply_buf));
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
   }
 
   return 0;
@@ -249,7 +249,7 @@ void set_user_username(int sender_fd, char *user_param, char *mode_param,
     char *current_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
     format_reply(reply_buf, BUF_SIZE, ERR_ALREADYREGISTERED, SERVER_NAME,
                  current_nick);
-    send_numeric_reply(sender_fd, reply_buf, strlen(reply_buf));
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
     return;
   }
 
@@ -274,6 +274,6 @@ void set_user_username(int sender_fd, char *user_param, char *mode_param,
     char reply_buf[BUF_SIZE];
     format_reply(reply_buf, BUF_SIZE, RPL_WELCOME, SERVER_NAME, nick, nick,
                  username, host_name);
-    send_numeric_reply(sender_fd, reply_buf, strlen(reply_buf));
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
   }
 }

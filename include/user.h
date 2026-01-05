@@ -42,6 +42,11 @@ extern void set_user_username(int sender_fd, char *user_param, char *mode_param,
 /*
  * Return the User struct associated with the provided file descriptor.
  */
-extern struct User *get_user(int query_fd);
+extern struct User *get_user_by_fd(int query_fd);
+
+/*
+ * Return the User struct associated with the provided nickname.
+ */
+extern struct User *get_user_by_nick(char *query_nick);
 
 #endif

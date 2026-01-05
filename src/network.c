@@ -196,11 +196,11 @@ void process_connections(int listener, int *fd_count, int *fd_size,
   }
 }
 
-void send_numeric_reply(int fd, char *buf, size_t size) {
+void send_string(int fd, char *buf, size_t size) {
   int NO_FLAGS = 0;
 
   if (send(fd, buf, size, NO_FLAGS) == -1) {
-    fprintf(stderr, "send_numeric_reply: failed to send %zu bytes to fd %d\n",
-            size, fd);
+    fprintf(stderr, "send_string: failed to send %zu bytes to fd %d\n", size,
+            fd);
   }
 }
