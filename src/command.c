@@ -6,32 +6,45 @@
 #include <string.h>
 
 int handle_privmsg_cmd(int sender_fd, char *recipient_nick, char *message) {
-  if (recipient_nick == NULL) {
-    // TODO: Send ERR_NORECIPIENT numeric
-    return -1;
-  }
-
-  if (message == NULL) {
-    // TODO: Send NO_TEXTTOSEND numeric
-    return -1;
-  }
-
   struct User *sender_user = get_user_by_fd(sender_fd);
+  char *sender_nickname = (sender_user->nick != NULL) ? sender_user->nick : "*";
+  char reply_buf[BUF_SIZE];
 
+  // Send ERR_NORECIPIENT numeric
+  if (recipient_nick == NULL) {
+    char *cmd_name = "PRIVMSG";
+    format_reply(reply_buf, BUF_SIZE, ERR_NORECIPIENT, SERVER_NAME,
+                 sender_nickname, cmd_name);
+    send_string(sender_fd, reply_buf, sizeof(reply_buf));
+    return -1;
+  }
+
+  // Send ERR_NOTEXTTOSEND numeric
+  if (message == NULL) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NOTEXTTOSEND, SERVER_NAME,
+                 sender_nickname);
+    send_string(sender_fd, reply_buf, sizeof(reply_buf));
+    return -1;
+  }
+
+  // Send ERR_NOTREGISTERED numeric
   if (!sender_user->is_registered) {
-    // TODO: Send ERR_NOTREGISTERED numeric
+    format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
+                 sender_nickname);
+    send_string(sender_fd, reply_buf, sizeof(reply_buf));
     return -1;
   }
 
   struct User *recipient_user = get_user_by_nick(recipient_nick);
 
+  // Send ERR_NOSUCHNICK numeric
   if (recipient_user == NULL) {
-    // TODO: Send ERR_NOSUCHNICK numeric
+    format_reply(reply_buf, BUF_SIZE, ERR_NOSUCHNICK, SERVER_NAME,
+                 sender_nickname, recipient_nick);
+    send_string(sender_fd, reply_buf, sizeof(reply_buf));
     return -1;
   }
 
-  char reply_buf[BUF_SIZE];
-  char *sender_nickname = sender_user->nick;
   char *sender_username = sender_user->user_name;
   char *sender_hostname = sender_user->host_name;
 

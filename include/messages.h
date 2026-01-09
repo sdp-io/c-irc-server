@@ -17,6 +17,40 @@
   ":%s 001 %s :Welcome to the Internet Relay Network %s!%s@%s\r\n"
 
 /*
+ * 401 ERR_NOSUCHNICK
+ * Returned to indicate that the nickname parameter supplied to
+ * command could not be found within the list of active users.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ *  3. The nickname that could not be found
+ */
+#define ERR_NOSUCHNICK ":%s 401 %s %s :No such nick/channel\r\n"
+
+/*
+ * 411 ERR_NORECIPIENT
+ * Returned when a command that requires a recipient/target (such as PRIVMSG)
+ * receives NULL instead of a valid recipient.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ *  3. The command that was called without a recipient
+ */
+#define ERR_NORECIPIENT ":%s 411 %s :No recipient given %s\r\n"
+
+/*
+ * 412 ERR_NOTEXTTOSEND
+ * Returned when a command that requires text to send receives NULL instead.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ */
+#define ERR_NOTEXTTOSEND ":%s 412 %s :No text to send\r\n"
+
+/*
  * 432 ERR_ERRONEOUSNICKNAME
  * Returned when a NICK command contains invalid characters, length, or format.
  *
@@ -38,6 +72,18 @@
  *  3. The unavailable nickname
  */
 #define ERR_NICKNAMEINUSE ":%s 433 %s %s :Nickname is already in use\r\n"
+
+/*
+ * 451 ERR_NOTREGISTERED
+ * Returned by the server to indicate that the client
+ * MUST be registered before the server will allow it
+ * to be parsed in detail.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname (or "*" if unset)
+ */
+#define ERR_NOTREGISTERED ":%s 451 %s :You have not registered\r\n"
 
 /*
  * 462 ERR_ALREADYREGISTERED
