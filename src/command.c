@@ -72,6 +72,22 @@ int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
   return 0;
 }
 
+int handle_ping_cmd(int sender_fd, char *message) {
+  char reply_buf[BUF_SIZE];
+
+  // Send ERR_NOORIGIN
+  if (message == NULL) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NOORIGIN, SERVER_NAME);
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  format_reply(reply_buf, BUF_SIZE, FMT_PING, SERVER_NAME, SERVER_NAME,
+               message);
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
+  return 0;
+}
+
 void handle_user_msg(int sender_fd, char *buf) {
   char *user_cmd = strtok(buf, " \r\n");
 
@@ -113,6 +129,17 @@ void handle_user_msg(int sender_fd, char *buf) {
     }
 
     handle_msg_cmd(sender_fd, recipient_param, message_param, is_notice);
+    return;
+  }
+
+  if ((strcasecmp(user_cmd, "PING")) == 0) {
+    char *message_param = strtok(NULL, "\r\n");
+    handle_ping_cmd(sender_fd, message_param);
+    return;
+  }
+
+  if ((strcasecmp(user_cmd, "PONG")) == 0) {
+    // Handle 'PONG' messages silently
     return;
   }
 }

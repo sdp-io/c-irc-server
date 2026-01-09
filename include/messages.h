@@ -29,6 +29,15 @@
 #define ERR_NOSUCHNICK ":%s 401 %s %s :No such nick/channel\r\n"
 
 /*
+ * Returned when a PONG command is sent without a corresponding server/message
+ * parameter.
+ *
+ * Format Args:
+ *  1. Server Name
+ */
+#define ERR_NOORIGIN ":%s 409 :No origin specified\r\n"
+
+/*
  * 411 ERR_NORECIPIENT
  * Returned when a command that requires a recipient/target (such as PRIVMSG)
  * receives NULL instead of a valid recipient.
@@ -122,5 +131,16 @@
  *   5. Contents of the message
  */
 #define FMT_NOTICE ":%s!%s@%s NOTICE %s :%s\r\n"
+
+/*
+ * FMT_PING
+ * Used to relay a response to a PING command to a target recipient.
+ *
+ * Format Args:
+ *   1. Server Name
+ *   2. Server Name
+ *   3. Contents of the original PING message
+ */
+#define FMT_PING ":%s PONG %s %s\r\n"
 
 #endif

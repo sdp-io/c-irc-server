@@ -18,4 +18,11 @@ extern void handle_user_msg(int sender_fd, char *buf);
 extern int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
                           bool is_notice);
 
+/*
+ * Receives a PING command from a sender along with a message parameter.
+ * Formats the message into FMT_PING, then relays the PONG response back
+ * to the sending user.
+ */
+extern int handle_ping_cmd(int sender_fd, char *message);
+
 #endif
