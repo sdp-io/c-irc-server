@@ -59,6 +59,9 @@
  */
 #define ERR_NOTEXTTOSEND ":%s 412 %s :No text to send\r\n"
 
+// TODO: Add documentation
+#define ERR_UNKNOWNCOMMAND ":%s 421 %s %s :Unknown command\r\n"
+
 /*
  * 432 ERR_ERRONEOUSNICKNAME
  * Returned when a NICK command contains invalid characters, length, or format.

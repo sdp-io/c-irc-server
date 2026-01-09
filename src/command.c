@@ -88,6 +88,16 @@ int handle_ping_cmd(int sender_fd, char *message) {
   return 0;
 }
 
+void handle_unknown_cmd(int sender_fd, char *command) {
+  char reply_buf[BUF_SIZE];
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char *sender_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
+
+  format_reply(reply_buf, BUF_SIZE, ERR_UNKNOWNCOMMAND, SERVER_NAME,
+               sender_nick, command);
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
+}
+
 void handle_user_msg(int sender_fd, char *buf) {
   char *user_cmd = strtok(buf, " \r\n");
 
@@ -142,4 +152,7 @@ void handle_user_msg(int sender_fd, char *buf) {
     // Handle 'PONG' messages silently
     return;
   }
+
+  // Unknown command, send ERR_UNKNOWNCOMMAND
+  handle_unknown_cmd(sender_fd, user_cmd);
 }
