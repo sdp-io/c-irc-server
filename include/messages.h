@@ -110,4 +110,17 @@
  */
 #define FMT_PRIVMSG ":%s!%s@%s PRIVMSG %s :%s\r\n"
 
+/*
+ * FMT_PRIVMSG
+ * Used to relay a notice from a sender to a target recipient.
+ *
+ * Format Args:
+ *   1. Sender Nickname
+ *   2. Sender Username
+ *   3. Sender Hostname
+ *   4. Target Recipient
+ *   5. Contents of the message
+ */
+#define FMT_NOTICE ":%s!%s@%s NOTICE %s :%s\r\n"
+
 #endif
