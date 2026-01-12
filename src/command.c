@@ -99,60 +99,62 @@ void handle_unknown_cmd(int sender_fd, char *command) {
 }
 
 void handle_user_msg(int sender_fd, char *buf) {
-  char *user_cmd = strtok(buf, " \r\n");
+  // Split the buffer into individual lines to handle multiple commands received
+  // in a single packet
+  char *line_saveptr = NULL;
+  char *inner_saveptr = NULL;
+  char *user_cmd_line = strtok_r(buf, "\r\n", &line_saveptr);
 
-  // Check if only received carriage return from user
-  if (user_cmd == NULL) {
-    return;
-  }
+  while (user_cmd_line != NULL) {
+    char *user_cmd = strtok_r(user_cmd_line, " ", &inner_saveptr);
 
-  if ((strcasecmp(user_cmd, "NICK")) == 0) {
-    char *nick_param = strtok(NULL, " \r\n");
-    set_user_nick(sender_fd, nick_param);
-    return;
-  }
-
-  if ((strcasecmp(user_cmd, "USER")) == 0) {
-    char *user_param = strtok(NULL, " \r\n");
-    char *mode_param = strtok(NULL, " \r\n");
-    strtok(NULL, " \r\n"); // Skip the unused 'server' param (RFC 1459)
-    char *realname_param = strtok(NULL, "\r\n");
-
-    // Safely parse the colon from the beginning of the realname param
-    if (realname_param != NULL && realname_param[0] == ':') {
-      realname_param++;
+    // Check if only received carriage return from user
+    if (user_cmd == NULL) {
+      user_cmd_line = strtok_r(NULL, "\r\n", &line_saveptr);
+      continue;
     }
 
-    set_user_username(sender_fd, user_param, mode_param, realname_param);
-    return;
-  }
+    bool is_privmsg = (strcasecmp(user_cmd, "PRIVMSG") == 0);
+    bool is_notice = (strcasecmp(user_cmd, "NOTICE") == 0);
 
-  bool is_privmsg = (strcasecmp(user_cmd, "PRIVMSG") == 0);
-  bool is_notice = (strcasecmp(user_cmd, "NOTICE") == 0);
-  if (is_privmsg || is_notice) {
-    char *recipient_param = strtok(NULL, " \r\n");
-    char *message_param = strtok(NULL, "\r\n");
+    if ((strcasecmp(user_cmd, "NICK")) == 0) {
+      char *nick_param = strtok_r(NULL, " ", &inner_saveptr);
+      set_user_nick(sender_fd, nick_param);
+    } else if ((strcasecmp(user_cmd, "USER")) == 0) {
+      char *user_param = strtok_r(NULL, " ", &inner_saveptr);
+      char *mode_param = strtok_r(NULL, " ", &inner_saveptr);
 
-    // Safely parse the colon from the beginning of the message param
-    if (message_param != NULL && message_param[0] == ':') {
-      message_param++;
+      // Skip the unused 'server' param (RFC 1459)
+      strtok_r(NULL, " ", &inner_saveptr);
+
+      char *realname_param = strtok_r(NULL, "", &inner_saveptr);
+
+      // Safely parse the colon from the beginning of the realname param
+      if (realname_param != NULL && realname_param[0] == ':') {
+        realname_param++;
+      }
+
+      set_user_username(sender_fd, user_param, mode_param, realname_param);
+    } else if (is_privmsg || is_notice) {
+      char *recipient_param = strtok_r(NULL, " ", &inner_saveptr);
+      char *message_param = strtok_r(NULL, "", &inner_saveptr);
+
+      // Safely parse the colon from the beginning of the message param
+      if (message_param != NULL && message_param[0] == ':') {
+        message_param++;
+      }
+
+      handle_msg_cmd(sender_fd, recipient_param, message_param, is_notice);
+    } else if ((strcasecmp(user_cmd, "PING")) == 0) {
+      char *message_param = strtok_r(NULL, "", &inner_saveptr);
+      handle_ping_cmd(sender_fd, message_param);
+    } else if ((strcasecmp(user_cmd, "PONG")) == 0) {
+      // Handle 'PONG' messages silently
+    } else {
+      // Unknown command, send ERR_UNKNOWNCOMMAND
+      handle_unknown_cmd(sender_fd, user_cmd);
     }
 
-    handle_msg_cmd(sender_fd, recipient_param, message_param, is_notice);
-    return;
+    user_cmd_line = strtok_r(NULL, "\r\n", &line_saveptr);
   }
-
-  if ((strcasecmp(user_cmd, "PING")) == 0) {
-    char *message_param = strtok(NULL, "\r\n");
-    handle_ping_cmd(sender_fd, message_param);
-    return;
-  }
-
-  if ((strcasecmp(user_cmd, "PONG")) == 0) {
-    // Handle 'PONG' messages silently
-    return;
-  }
-
-  // Unknown command, send ERR_UNKNOWNCOMMAND
-  handle_unknown_cmd(sender_fd, user_cmd);
 }
