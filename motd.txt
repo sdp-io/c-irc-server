@@ -1,0 +1,4 @@
+Welcome to the IRC Server!
+
+This is a file that contains the server MOTD!
+Enter your own custom text here!

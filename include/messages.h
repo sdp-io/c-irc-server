@@ -16,6 +16,15 @@
 #define RPL_WELCOME                                                            \
   ":%s 001 %s :Welcome to the Internet Relay Network %s!%s@%s\r\n"
 
+// TODO: Add documentation
+#define RPL_MOTD ":%s 372 :- %s\r\n"
+
+// TODO: Add documentation
+#define RPL_MOTDSTART ":%s 375 :- %s Message of the day - \r\n"
+
+// TODO: Add documentation
+#define RPL_ENDOFMOTD ":%s 376 :End of MOTD command\r\n"
+
 /*
  * 401 ERR_NOSUCHNICK
  * Returned to indicate that the nickname parameter supplied to

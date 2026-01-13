@@ -5,6 +5,8 @@
 
 #define BUF_SIZE 512
 
+#define MOTD_LINE_SIZE 100
+
 #define MAX_NICK_LEN 30
 
 #define SERVER_NAME "localhost"

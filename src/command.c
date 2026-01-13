@@ -4,6 +4,7 @@
 #include "user.h"
 #include "utils.h"
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 #include <strings.h>
 
@@ -98,6 +99,34 @@ void handle_unknown_cmd(int sender_fd, char *command) {
   send_string(sender_fd, reply_buf, strlen(reply_buf));
 }
 
+int handle_motd_cmd(int sender_fd) {
+  FILE *motd_file;
+
+  if ((motd_file = fopen("motd.txt", "r")) == NULL) {
+    fprintf(stderr, "handle_motd_cmd: error opening motd.txt\n");
+    return -1;
+  }
+
+  char motd_buf[MOTD_LINE_SIZE];
+  char reply_buf[BUF_SIZE];
+
+  format_reply(reply_buf, sizeof(reply_buf), RPL_MOTDSTART, SERVER_NAME,
+               SERVER_NAME);
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+  while (fgets(motd_buf, sizeof(motd_buf), motd_file)) {
+    motd_buf[strcspn(motd_buf, "\r\n")] = '\0'; // Trim carriage return
+    format_reply(reply_buf, sizeof(reply_buf), RPL_MOTD, SERVER_NAME, motd_buf);
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+  }
+
+  format_reply(reply_buf, sizeof(reply_buf), RPL_ENDOFMOTD, SERVER_NAME);
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+  fclose(motd_file);
+  return 0;
+}
+
 void handle_user_msg(int sender_fd, char *buf) {
   // Split the buffer into individual lines to handle multiple commands received
   // in a single packet
@@ -145,6 +174,8 @@ void handle_user_msg(int sender_fd, char *buf) {
       }
 
       handle_msg_cmd(sender_fd, recipient_param, message_param, is_notice);
+    } else if ((strcasecmp(user_cmd, "MOTD")) == 0) {
+      handle_motd_cmd(sender_fd);
     } else if ((strcasecmp(user_cmd, "PING")) == 0) {
       char *message_param = strtok_r(NULL, "", &inner_saveptr);
       handle_ping_cmd(sender_fd, message_param);
