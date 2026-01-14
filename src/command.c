@@ -127,6 +127,57 @@ int handle_motd_cmd(int sender_fd) {
   return 0;
 }
 
+int handle_whois_cmd(int sender_fd, char *query_nick) {
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char reply_buf[BUF_SIZE];
+
+  if (!sender_user->is_registered) {
+    char *sender_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
+    format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
+                 sender_nick);
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  if (query_nick == NULL) {
+    // Handle targetless WHOIS calls silently
+    return -1;
+  }
+
+  struct User *query_user = get_user_by_nick(query_nick);
+
+  if (!query_user || !query_user->is_registered) {
+    // Receive nickname of sender to format ERR_NOSUCHNICK reply
+    char *sender_nick = sender_user->nick;
+    format_reply(reply_buf, BUF_SIZE, ERR_NOSUCHNICK, SERVER_NAME, sender_nick,
+                 query_nick);
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  char *query_username = query_user->user_name;
+  char *query_hostname = query_user->host_name;
+  char *query_realname = query_user->real_name;
+
+  // Send RPL_WHOISUSER
+  format_reply(reply_buf, BUF_SIZE, RPL_WHOISUSER, SERVER_NAME, query_nick,
+               query_username, query_hostname, query_realname);
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+  // Send RPL_WHOISSERVER (format with SERVER_NAME macro directly as we are not
+  // currently a part of a network of servers)
+  format_reply(reply_buf, BUF_SIZE, RPL_WHOISSERVER, SERVER_NAME, query_nick,
+               SERVER_NAME, SERVER_INFO);
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+  // Send RPL_ENDOFWHOIS
+  format_reply(reply_buf, BUF_SIZE, RPL_ENDOFWHOIS, SERVER_NAME, query_nick);
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+  // TODO: Add further server replies once channels are implemented
+  return 0;
+}
+
 void handle_user_msg(int sender_fd, char *buf) {
   // Split the buffer into individual lines to handle multiple commands received
   // in a single packet
@@ -174,6 +225,9 @@ void handle_user_msg(int sender_fd, char *buf) {
       }
 
       handle_msg_cmd(sender_fd, recipient_param, message_param, is_notice);
+    } else if ((strcasecmp(user_cmd, "WHOIS")) == 0) {
+      char *nick_param = strtok_r(NULL, " ", &inner_saveptr);
+      handle_whois_cmd(sender_fd, nick_param);
     } else if ((strcasecmp(user_cmd, "MOTD")) == 0) {
       handle_motd_cmd(sender_fd);
     } else if ((strcasecmp(user_cmd, "PING")) == 0) {

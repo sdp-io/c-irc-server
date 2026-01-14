@@ -17,6 +17,15 @@
   ":%s 001 %s :Welcome to the Internet Relay Network %s!%s@%s\r\n"
 
 // TODO: Add documentation
+#define RPL_WHOISUSER ":%s 311 %s %s %s * :%s\r\n"
+
+// TODO: Add documentation
+#define RPL_WHOISSERVER ":%s 312 %s %s :%s\r\n"
+
+// TODO: Add documentation
+#define RPL_ENDOFWHOIS ":%s 318 %s :End of /WHOIS list\r\n"
+
+// TODO: Add documentation
 #define RPL_MOTD ":%s 372 :- %s\r\n"
 
 // TODO: Add documentation

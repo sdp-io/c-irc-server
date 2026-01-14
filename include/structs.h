@@ -11,6 +11,8 @@
 
 #define SERVER_NAME "localhost"
 
+#define SERVER_INFO "Insert server information here!"
+
 /*
  * Struct containing information for a user currently on the IRC server.
  * Allows for ease of nickname verification and messaging capabilities.
