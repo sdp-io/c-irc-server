@@ -17,7 +17,7 @@ static int unknown_user_count = 0;
 // Count of users that have completed the NICK and USER commands
 static int registered_user_count = 0;
 
-int get_user_count(void) { return unknown_user_count; }
+int get_unknown_user_count(void) { return unknown_user_count; }
 
 int get_registered_user_count(void) { return registered_user_count; }
 

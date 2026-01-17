@@ -50,13 +50,13 @@ extern struct User *get_user_by_fd(int query_fd);
 extern struct User *get_user_by_nick(char *query_nick);
 
 /*
- * Return the number of users both registered and unregistered currently
- * connected to the server
+ * Return the number of unregistered users currently
+ * connected to the server.
  */
-extern int get_user_count(void);
+extern int get_unknown_user_count(void);
 
 /*
- * Return the number of registered users currently connected to the server
+ * Return the number of registered users currently connected to the server.
  */
 extern int get_registered_user_count(void);
 

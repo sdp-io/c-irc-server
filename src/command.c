@@ -277,11 +277,11 @@ int handle_whois_cmd(int sender_fd, char *query_nick) {
   return 0;
 }
 
-int handle_luser_cmd(int sender_fd) {
+int handle_lusers_cmd(int sender_fd) {
   // TODO: Support and handle mask and target parameters
   int reply_status;
 
-  int user_count = get_user_count();
+  int unknown_user_count = get_unknown_user_count();
   int registered_user_count = get_registered_user_count();
 
   // Temporary variables for formatting of replies as channels, services,
@@ -296,6 +296,7 @@ int handle_luser_cmd(int sender_fd) {
   // RPL_LUSERCLIENT reply
   format_reply(reply_buf, BUF_SIZE, RPL_LUSERCLIENT, SERVER_NAME,
                registered_user_count, service_count, server_count);
+
   reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
   if (reply_status == -1) {
     fprintf(stderr, "handle_luser_cmd: error sending RPL_LUSERCLIENT to %d\n",
@@ -305,6 +306,7 @@ int handle_luser_cmd(int sender_fd) {
 
   // RPL_LUSEROP reply
   format_reply(reply_buf, BUF_SIZE, RPL_LUSEROP, SERVER_NAME, operator_count);
+
   reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
   if (reply_status == -1) {
     fprintf(stderr, "handle_luser_cmd: error sending RPL_LUSEROP to %d\n",
@@ -313,7 +315,9 @@ int handle_luser_cmd(int sender_fd) {
   }
 
   // RPL_LUSERUNKNOWN reply
-  format_reply(reply_buf, BUF_SIZE, RPL_LUSERUNKNOWN, SERVER_NAME, user_count);
+  format_reply(reply_buf, BUF_SIZE, RPL_LUSERUNKNOWN, SERVER_NAME,
+               unknown_user_count);
+
   reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
   if (reply_status == -1) {
     fprintf(stderr,
@@ -325,6 +329,7 @@ int handle_luser_cmd(int sender_fd) {
   // RPL_LUSERCHANNELS reply
   format_reply(reply_buf, BUF_SIZE, RPL_LUSERCHANNELS, SERVER_NAME,
                channel_count);
+
   reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
   if (reply_status == -1) {
     fprintf(stderr, "handle_luser_cmd: error sending RPL_LUSERCHANNELS to %d\n",
@@ -335,6 +340,7 @@ int handle_luser_cmd(int sender_fd) {
   // RPL_LUSERME reply
   format_reply(reply_buf, BUF_SIZE, RPL_LUSERME, SERVER_NAME,
                registered_user_count, server_count);
+
   reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
   if (reply_status == -1) {
     fprintf(stderr, "handle_luser_cmd: error sending RPL_LUSERME to %d\n",
@@ -397,8 +403,8 @@ void handle_user_msg(int sender_fd, char *buf) {
       handle_whois_cmd(sender_fd, nick_param);
     } else if ((strcasecmp(user_cmd, "MOTD")) == 0) {
       handle_motd_cmd(sender_fd);
-    } else if ((strcasecmp(user_cmd, "LUSER")) == 0) {
-      handle_luser_cmd(sender_fd);
+    } else if ((strcasecmp(user_cmd, "LUSERS")) == 0) {
+      handle_lusers_cmd(sender_fd);
     } else if ((strcasecmp(user_cmd, "PING")) == 0) {
       char *message_param = strtok_r(NULL, "", &inner_saveptr);
       handle_ping_cmd(sender_fd, message_param);
