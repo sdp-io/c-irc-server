@@ -17,6 +17,22 @@
   ":%s 001 %s :Welcome to the Internet Relay Network %s!%s@%s\r\n"
 
 // TODO: Add documentation
+#define RPL_LUSERCLIENT                                                        \
+  ":%s 251 :There are %d users and %d services on %d servers\r\n"
+
+// TODO: Add documentation
+#define RPL_LUSEROP ":%s 252 %d :operator(s) online\r\n"
+
+// TODO: Add documentation
+#define RPL_LUSERUNKNOWN ":%s 253 %d :unknown connection(s)\r\n"
+
+// TODO: Add documentation
+#define RPL_LUSERCHANNELS ":%s 254 %d :channels formed\r\n"
+
+// TODO: Add documentation
+#define RPL_LUSERME ":%s 255 :I have %d clients and %d servers\r\n"
+
+// TODO: Add documentation
 #define RPL_WHOISUSER ":%s 311 %s %s %s * :%s\r\n"
 
 // TODO: Add documentation

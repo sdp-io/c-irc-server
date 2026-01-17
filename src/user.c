@@ -11,8 +11,15 @@
 // Linked list of users for the IRC server
 static struct UserNode *users_head = NULL;
 
-// Count of users currently active on the IRC Server
-static int user_count = 0;
+// Count of users currently connected to the IRC Server
+static int unknown_user_count = 0;
+
+// Count of users that have completed the NICK and USER commands
+static int registered_user_count = 0;
+
+int get_user_count(void) { return unknown_user_count; }
+
+int get_registered_user_count(void) { return registered_user_count; }
 
 struct User *get_user_by_fd(int query_fd) {
   struct UserNode *users_iterator = users_head;
@@ -95,52 +102,66 @@ int add_to_users(int user_fd, char *user_host) {
   // Assign new user to head of users linked list and increment user count
   new_user_node->next = users_head;
   users_head = new_user_node;
-  user_count++;
+  unknown_user_count++;
 
   return 0;
 }
 
 void del_from_users(int user_fd) {
-  struct UserNode *users_iterator = users_head;
+  struct UserNode *user_node_iterator = users_head;
 
-  if (users_iterator == NULL) {
+  if (user_node_iterator == NULL) {
     fprintf(stderr, "del_from_users: no list to delete from!");
     return;
   }
 
-  int iterator_fd = users_iterator->user_info->user_fd;
+  struct User *current_user_info = user_node_iterator->user_info;
+  int iterator_fd = current_user_info->user_fd;
 
   // Handle removal of user at head of the linked list
   if (iterator_fd == user_fd) {
-    users_head = users_iterator->next;
-    free(users_iterator->user_info);
-    free(users_iterator);
-    user_count--;
+    if (current_user_info->is_registered) {
+      registered_user_count--;
+    } else {
+      unknown_user_count--;
+    }
+
+    users_head = user_node_iterator->next;
+    free(current_user_info);
+    free(user_node_iterator);
+
     return;
   }
 
   // Traverse the linked list of active users comparing each user's fd to the
   // one that must be deleted
-  struct UserNode *prev_node = users_iterator;
-  users_iterator = users_iterator->next;
-  while (users_iterator != NULL) {
-    if (users_iterator->user_info->user_fd == user_fd) {
-      prev_node->next = users_iterator->next;
+  struct UserNode *prev_node = user_node_iterator;
+  user_node_iterator = user_node_iterator->next;
+  while (user_node_iterator != NULL) {
+
+    if (user_node_iterator->user_info->user_fd == user_fd) {
+      if (current_user_info->is_registered) {
+        registered_user_count--;
+      } else {
+        unknown_user_count--;
+      }
+
+      prev_node->next = user_node_iterator->next;
 
       // Free allocated memory associated with the deleted user
-      free(users_iterator->user_info->nick);
-      free(users_iterator->user_info->user_name);
-      free(users_iterator->user_info->real_name);
-      free(users_iterator->user_info->host_name);
-      free(users_iterator->user_info);
-      free(users_iterator);
+      free(current_user_info->nick);
+      free(current_user_info->user_name);
+      free(current_user_info->real_name);
+      free(current_user_info->host_name);
+      free(current_user_info);
+      free(user_node_iterator);
 
-      user_count--;
       return;
     }
 
-    prev_node = users_iterator;
-    users_iterator = users_iterator->next;
+    prev_node = user_node_iterator;
+    user_node_iterator = user_node_iterator->next;
+    current_user_info = user_node_iterator->user_info;
   }
 
   // The specified fd was not found within the list of user fds
@@ -220,6 +241,8 @@ int set_user_nick(int sender_fd, char *sender_nick) {
   // RPL_WELCOME
   if (has_nick && has_username && !is_registered) {
     sender->is_registered = true;
+    registered_user_count++;
+    unknown_user_count--;
 
     char *nick = sender->nick;
     char *username = sender->user_name;
@@ -266,6 +289,8 @@ void set_user_username(int sender_fd, char *user_param, char *mode_param,
   // RPL_WELCOME
   if (has_nick && has_username && !is_registerd) {
     sender_user->is_registered = true;
+    registered_user_count++;
+    unknown_user_count--;
 
     char *nick = sender_user->nick;
     char *username = sender_user->user_name;

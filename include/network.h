@@ -54,7 +54,8 @@ extern void process_connections(int listener, int *fd_count, int *fd_size,
 /*
  * Given a buffer containing a corresponding reply (RFC 2812)
  * or message, attempt to send it to the specified file descriptor.
+ * Returns 0 if the message was sent successfully and -1 if it fails.
  */
-extern void send_string(int sender_fd, char *reply_buf, u_int size);
+extern int send_string(int sender_fd, char *reply_buf, u_int size);
 
 #endif
