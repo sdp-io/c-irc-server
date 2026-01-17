@@ -16,38 +16,136 @@
 #define RPL_WELCOME                                                            \
   ":%s 001 %s :Welcome to the Internet Relay Network %s!%s@%s\r\n"
 
-// TODO: Add documentation
+/*
+ * 251 RPL_LUSERCLIENT
+ * Sent as part of the LUSERS response, detailing the global number of
+ * users, services, and servers on the network.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Number of Users (int)
+ *  3. Number of Services (int)
+ *  4. Number of Servers (int)
+ */
 #define RPL_LUSERCLIENT                                                        \
   ":%s 251 :There are %d users and %d services on %d servers\r\n"
 
-// TODO: Add documentation
+/*
+ * 252 RPL_LUSEROP
+ * Sent as part of the LUSERS response to indicate the number of IRC operators.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Number of Operators (int)
+ */
 #define RPL_LUSEROP ":%s 252 %d :operator(s) online\r\n"
 
-// TODO: Add documentation
+/*
+ * 253 RPL_LUSERUNKNOWN
+ * Sent as part of the LUSERS response to indicate the number of unknown
+ * (unregistered) connections currently on the server.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Number of Unknown Connections (int)
+ */
 #define RPL_LUSERUNKNOWN ":%s 253 %d :unknown connection(s)\r\n"
 
-// TODO: Add documentation
+/*
+ * 254 RPL_LUSERCHANNELS
+ * Sent as part of the LUSERS response to indicate the number of channels
+ * currently formed on the server.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Number of Channels (int)
+ */
 #define RPL_LUSERCHANNELS ":%s 254 %d :channels formed\r\n"
 
-// TODO: Add documentation
+/*
+ * 255 RPL_LUSERME
+ * Sent as part of the LUSERS response, detailing the number of clients
+ * and servers connected specifically to the local server.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Number of Local Clients (int)
+ *  3. Number of Local Servers (int)
+ */
 #define RPL_LUSERME ":%s 255 :I have %d clients and %d servers\r\n"
 
-// TODO: Add documentation
+/*
+ * 311 RPL_WHOISUSER
+ * One of the replies to the WHOIS command. Contains the specific
+ * user information for the target nickname.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname (The user requesting the info)
+ *  3. Query Nickname (The user being looked up)
+ *  4. Query Username
+ *  5. Query Hostname
+ *  6. Query Realname
+ */
 #define RPL_WHOISUSER ":%s 311 %s %s %s * :%s\r\n"
 
-// TODO: Add documentation
+/*
+ * 312 RPL_WHOISSERVER
+ * One of the replies to the WHOIS command. Indicates which server
+ * the queried user is currently connected to.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ *  3. Query Nickname
+ *  4. Server Hostname (where Query Nick is connected)
+ *  5. Server Info String
+ */
 #define RPL_WHOISSERVER ":%s 312 %s %s :%s\r\n"
 
-// TODO: Add documentation
+/*
+ * 318 RPL_ENDOFWHOIS
+ * Marks the end of the WHOIS response sequence.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ *  3. Query Nickname
+ */
 #define RPL_ENDOFWHOIS ":%s 318 %s :End of /WHOIS list\r\n"
 
-// TODO: Add documentation
+/*
+ * 372 RPL_MOTD
+ * Contains one line of the Message of the Day text.
+ * Sent repeatedly for every line in the MOTD file.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ *  3. One line of MOTD text
+ */
 #define RPL_MOTD ":%s 372 :- %s\r\n"
 
-// TODO: Add documentation
+/*
+ * 375 RPL_MOTDSTART
+ * Sent at the beginning of the MOTD response sequence.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ *  3. Server Name (to display in the text)
+ */
 #define RPL_MOTDSTART ":%s 375 :- %s Message of the day - \r\n"
 
-// TODO: Add documentation
+/*
+ * 376 RPL_ENDOFMOTD
+ * Sent at the end of the MOTD response sequence to indicate
+ * no more text will follow.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ */
 #define RPL_ENDOFMOTD ":%s 376 :End of MOTD command\r\n"
 
 /*
@@ -93,7 +191,16 @@
  */
 #define ERR_NOTEXTTOSEND ":%s 412 %s :No text to send\r\n"
 
-// TODO: Add documentation
+/*
+ * 421 ERR_UNKNOWNCOMMAND
+ * Returned when the server receives a command that is not in its
+ * list of implemented handlers.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ *  3. The unknown command string
+ */
 #define ERR_UNKNOWNCOMMAND ":%s 421 %s %s :Unknown command\r\n"
 
 /*
