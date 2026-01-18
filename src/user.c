@@ -77,6 +77,7 @@ int add_to_users(int user_fd, char *user_host) {
   if (host_name == NULL) {
     fprintf(stderr,
             "add_to_users: error allocating memory for user host name\n");
+    free(new_user);
     return -1;
   }
 
@@ -93,6 +94,7 @@ int add_to_users(int user_fd, char *user_host) {
   struct UserNode *new_user_node = malloc(sizeof(struct UserNode));
   if (new_user_node == NULL) {
     free(new_user);
+    free(host_name);
     fprintf(stderr, "add_to_users: error allocating memory for user node\n");
     return -1;
   }
@@ -127,6 +129,10 @@ void del_from_users(int user_fd) {
     }
 
     users_head = user_node_iterator->next;
+    free(current_user_info->nick);
+    free(current_user_info->user_name);
+    free(current_user_info->real_name);
+    free(current_user_info->host_name);
     free(current_user_info);
     free(user_node_iterator);
 
