@@ -174,6 +174,9 @@ void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
   } else { // Received some good data from the client
     printf("pollserver: recv from fd %d: %.*s\n", sender_fd, nbytes, buf);
 
+    // Add a null-terminator to the next open index to create a valid string
+    buf[nbytes] = '\0';
+
     handle_user_msg(sender_fd, buf);
   }
 }
