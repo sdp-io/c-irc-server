@@ -1,3 +1,4 @@
+#include "channel.h"
 #include "messages.h"
 #include "network.h"
 #include "structs.h"
@@ -351,6 +352,23 @@ int handle_lusers_cmd(int sender_fd) {
   return 0;
 }
 
+int handle_join_cmd(int sender_fd, char *channel_name) {
+  if (channel_name == NULL) {
+    // TODO: Send ERR_NEEDMOREPARAMS
+    return -1;
+  }
+
+  struct User *sender_user = get_user_by_fd(sender_fd);
+
+  int join_status = join_channel(sender_user, channel_name);
+  if (join_status == -1) {
+    printf("handle_join_cmd: error joining channel %s\n", channel_name);
+    return -1;
+  }
+
+  return 0;
+}
+
 void handle_user_msg(int sender_fd, char *buf) {
   // Split the buffer into individual lines to handle multiple commands received
   // in a single packet
@@ -398,6 +416,9 @@ void handle_user_msg(int sender_fd, char *buf) {
       }
 
       handle_msg_cmd(sender_fd, recipient_param, message_param, is_notice);
+    } else if ((strcasecmp(user_cmd, "JOIN")) == 0) {
+      char *channel_param = strtok_r(NULL, " ", &inner_saveptr);
+      handle_join_cmd(sender_fd, channel_param);
     } else if ((strcasecmp(user_cmd, "WHOIS")) == 0) {
       char *nick_param = strtok_r(NULL, " ", &inner_saveptr);
       handle_whois_cmd(sender_fd, nick_param);

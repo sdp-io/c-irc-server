@@ -38,4 +38,20 @@ struct UserNode {
   struct UserNode *next;
 };
 
+struct ChannelNode {
+  struct Channel *channel_info;
+  struct ChannelNode *next;
+};
+
+/*
+ * Struct containing information for a channel on the IRC server.
+ * Allows for creation of channels along with channel management and user
+ * interaction.
+ */
+struct Channel {
+  char *channel_name;
+  char *topic;
+  struct UserNode *user_list;
+};
+
 #endif
