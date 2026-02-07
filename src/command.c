@@ -369,6 +369,23 @@ int handle_join_cmd(int sender_fd, char *channel_name) {
   return 0;
 }
 
+int handle_part_cmd(int sender_fd, char *channel_name, char *parting_message) {
+  if (channel_name == NULL) {
+    // TODO: Send ERR_NEEDMOREPARAMS
+    return -1;
+  }
+
+  struct User *sender_user = get_user_by_fd(sender_fd);
+
+  int part_status = leave_channel(sender_user, channel_name, parting_message);
+  if (part_status == -1) {
+    printf("handle_part_cmd: error parting from channel %s\n", channel_name);
+    return -1;
+  }
+
+  return 0;
+}
+
 void handle_user_msg(int sender_fd, char *buf) {
   // Split the buffer into individual lines to handle multiple commands received
   // in a single packet
@@ -419,6 +436,15 @@ void handle_user_msg(int sender_fd, char *buf) {
     } else if ((strcasecmp(user_cmd, "JOIN")) == 0) {
       char *channel_param = strtok_r(NULL, " ", &inner_saveptr);
       handle_join_cmd(sender_fd, channel_param);
+    } else if ((strcasecmp(user_cmd, "PART")) == 0) {
+      char *channel_param = strtok_r(NULL, " ", &inner_saveptr);
+      char *message_param = strtok_r(NULL, "", &inner_saveptr);
+
+      if (message_param != NULL && message_param[0] == ':') {
+        message_param++;
+      }
+
+      handle_part_cmd(sender_fd, channel_param, message_param);
     } else if ((strcasecmp(user_cmd, "WHOIS")) == 0) {
       char *nick_param = strtok_r(NULL, " ", &inner_saveptr);
       handle_whois_cmd(sender_fd, nick_param);

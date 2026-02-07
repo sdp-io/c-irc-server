@@ -63,6 +63,17 @@ struct Channel *get_channel(char *channel_name) {
   return NULL;
 }
 
+bool channel_has_user(struct UserNode *user_list, struct User *query_user) {
+  int query_user_fd = query_user->user_fd;
+  while (user_list != NULL) {
+    int current_user_fd = user_list->user_info->user_fd;
+    if (query_user_fd == current_user_fd) {
+      return true;
+    }
+  }
+  return false;
+}
+
 int channel_add_user(struct Channel *channel, struct User *new_user) {
   struct UserNode *new_user_node = malloc(sizeof(struct UserNode));
   if (new_user_node == NULL) {
@@ -78,6 +89,47 @@ int channel_add_user(struct Channel *channel, struct User *new_user) {
   channel->user_list = new_user_node;
 
   return 0;
+}
+
+int channel_remove_user(struct UserNode **channel_users,
+                        struct User *parting_user) {
+  // Handle cases where the users list is NULL or empty
+  if (channel_users == NULL || *channel_users == NULL) {
+    return -1;
+  }
+
+  // Create iterator variables to traverse the channel's users linked list
+  struct UserNode *user_node_iterator = *channel_users;
+  struct User *iterator_user = user_node_iterator->user_info;
+  struct UserNode *prev_user_node = NULL;
+
+  int parting_user_fd = parting_user->user_fd;
+  int iterator_user_fd = iterator_user->user_fd;
+
+  // Handle removal of user at head of the linked list
+  if (parting_user_fd == iterator_user_fd) {
+    *channel_users = user_node_iterator->next;
+    free(user_node_iterator);
+    return 0;
+  }
+
+  while (user_node_iterator != NULL) {
+    iterator_user = user_node_iterator->user_info;
+    iterator_user_fd = iterator_user->user_fd;
+
+    // Remove and free the matching user from the channel's user list
+    if (parting_user_fd == iterator_user_fd) {
+      prev_user_node->next = user_node_iterator->next;
+      free(user_node_iterator);
+      return 0;
+    }
+
+    prev_user_node = user_node_iterator;
+    user_node_iterator = user_node_iterator->next;
+  }
+
+  // Parting user's file descriptor not found in channel's list of active users
+  return -2;
 }
 
 // JOIN a channel. Add user to list of joined users.
@@ -96,12 +148,52 @@ int join_channel(struct User *joining_user, char *channel_name) {
     return -1;
   }
 
+  struct UserNode *channel_user_list = searched_channel->user_list;
+  if (channel_has_user(channel_user_list, joining_user)) {
+    // User already active in the channel, return normally
+    return 0;
+  }
+
   int join_status = channel_add_user(searched_channel, joining_user);
   if (join_status == -1) {
     char *joining_user_nick = joining_user->nick;
     fprintf(stderr, "join_channel: failed to add user %s to %s user list\n",
             joining_user_nick, channel_name);
     return -1;
+  }
+
+  return 0;
+}
+
+int leave_channel(struct User *parting_user, char *channel_name,
+                  char *parting_message) {
+
+  struct Channel *searched_channel = get_channel(channel_name);
+
+  // Searched channel not found, return as failure
+  if (searched_channel == NULL) {
+    // TODO: Handle ERR_NOSUCHCHANNEL reply
+    return -1;
+  }
+
+  struct UserNode **channel_users = &(searched_channel->user_list);
+  if (!channel_has_user(*channel_users, parting_user)) {
+    // TODO: Handle ERR_NOTONCHANNEL reply
+    return -1;
+  }
+
+  int part_status = channel_remove_user(channel_users, parting_user);
+  if (part_status == -1) {
+    char *parting_user_nick = parting_user->nick;
+    fprintf(stderr,
+            "leave_channel: channel %s has NULL user list while user %s tried "
+            "to part\n",
+            channel_name, parting_user_nick);
+    return -1;
+  }
+
+  if (parting_message != NULL) {
+    // TODO: Handle sending of parting msg to users in channel
   }
 
   return 0;
