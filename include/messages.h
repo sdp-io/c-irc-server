@@ -277,6 +277,20 @@
 #define FMT_NOTICE ":%s!%s@%s NOTICE %s :%s\r\n"
 
 /*
+ * FMT_PART
+ * Used to relay a response upon the PARTing of a user from a specified channel.
+ * Relays an optional PARTing string to users remaining in the channel.
+ *
+ * Format Args:
+ *  1. Sender Nickname
+ *  2. Sender Username
+ *  3. Sender Hostname
+ *  4. Target Channel
+ *  5. (Optional) Contents of the parting message
+ */
+#define FMT_PART ":%s!%s@%s PART %s :%s\r\n"
+
+/*
  * FMT_PING
  * Used to relay a response to a PING command to a target recipient.
  *

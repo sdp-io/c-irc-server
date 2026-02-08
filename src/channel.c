@@ -1,4 +1,7 @@
+#include "messages.h"
+#include "network.h"
 #include "structs.h"
+#include "utils.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,12 +68,17 @@ struct Channel *get_channel(char *channel_name) {
 
 bool channel_has_user(struct UserNode *user_list, struct User *query_user) {
   int query_user_fd = query_user->user_fd;
-  while (user_list != NULL) {
-    int current_user_fd = user_list->user_info->user_fd;
+
+  struct UserNode *user_node_iterator = user_list;
+  while (user_node_iterator != NULL) {
+    int current_user_fd = user_node_iterator->user_info->user_fd;
     if (query_user_fd == current_user_fd) {
       return true;
     }
+
+    user_node_iterator = user_node_iterator->next;
   }
+
   return false;
 }
 
@@ -89,6 +97,20 @@ int channel_add_user(struct Channel *channel, struct User *new_user) {
   channel->user_list = new_user_node;
 
   return 0;
+}
+
+void channel_message_users(struct UserNode *user_list, char *message) {
+  if (user_list == NULL) {
+    return;
+  }
+
+  struct UserNode *user_node_iterator = user_list;
+  while (user_node_iterator != NULL) {
+    int iterator_user_fd = user_node_iterator->user_info->user_fd;
+    send_string(iterator_user_fd, message, strlen(message));
+
+    user_node_iterator = user_node_iterator->next;
+  }
 }
 
 int channel_remove_user(struct UserNode **channel_users,
@@ -173,15 +195,35 @@ int leave_channel(struct User *parting_user, char *channel_name,
   // Searched channel not found, return as failure
   if (searched_channel == NULL) {
     // TODO: Handle ERR_NOSUCHCHANNEL reply
+    printf("TEST - ERR_NOSUCHCHANNEL\n");
     return -1;
   }
 
   struct UserNode **channel_users = &(searched_channel->user_list);
   if (!channel_has_user(*channel_users, parting_user)) {
     // TODO: Handle ERR_NOTONCHANNEL reply
+    printf("TEST - ERR_NOTONCHANNEL\n");
     return -1;
   }
 
+  if (parting_message == NULL) {
+    // TODO: Handle sending of parting msg to users in channel
+    parting_message = "";
+  }
+
+  char parting_msg_buf[BUF_SIZE];
+  char *parting_user_nick = parting_user->nick;
+  char *parting_user_username = parting_user->user_name;
+  char *parting_user_host = parting_user->host_name;
+
+  format_reply(parting_msg_buf, BUF_SIZE, FMT_PART, parting_user_nick,
+               parting_user_username, parting_user_host, channel_name,
+               parting_message);
+
+  // Send message to every user within the channel user list (including sender)
+  channel_message_users(*channel_users, parting_msg_buf);
+
+  // Then attempt to remove sender from the channel user list
   int part_status = channel_remove_user(channel_users, parting_user);
   if (part_status == -1) {
     char *parting_user_nick = parting_user->nick;
@@ -190,10 +232,11 @@ int leave_channel(struct User *parting_user, char *channel_name,
             "to part\n",
             channel_name, parting_user_nick);
     return -1;
-  }
-
-  if (parting_message != NULL) {
-    // TODO: Handle sending of parting msg to users in channel
+  } else if (part_status == -2) {
+    char *parting_user_nick = parting_user->nick;
+    fprintf(stderr, "leave_channel: user %s not found in channel %s\n",
+            parting_user_nick, channel_name);
+    return -1;
   }
 
   return 0;
