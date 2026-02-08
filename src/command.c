@@ -359,6 +359,10 @@ int handle_join_cmd(int sender_fd, char *channel_name) {
   }
 
   struct User *sender_user = get_user_by_fd(sender_fd);
+  if (!sender_user->is_registered) {
+    // TODO: Send ERR_NOTREGISTERED
+    return -1;
+  }
 
   int join_status = join_channel(sender_user, channel_name);
   if (join_status == -1) {
@@ -376,6 +380,10 @@ int handle_part_cmd(int sender_fd, char *channel_name, char *parting_message) {
   }
 
   struct User *sender_user = get_user_by_fd(sender_fd);
+  if (!sender_user->is_registered) {
+    // TODO: Send ERR_NOTREGISTERED
+    return -1;
+  }
 
   int part_status = leave_channel(sender_user, channel_name, parting_message);
   if (part_status == -1) {
