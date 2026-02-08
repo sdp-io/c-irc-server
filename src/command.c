@@ -353,14 +353,20 @@ int handle_lusers_cmd(int sender_fd) {
 }
 
 int handle_join_cmd(int sender_fd, char *channel_name) {
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char *sender_nick = sender_user->nick;
+  char reply_buf[BUF_SIZE];
+
   if (channel_name == NULL) {
-    // TODO: Send ERR_NEEDMOREPARAMS
+    format_reply(reply_buf, BUF_SIZE, ERR_NEEDMOREPARAMS, SERVER_NAME, "JOIN");
     return -1;
   }
 
-  struct User *sender_user = get_user_by_fd(sender_fd);
   if (!sender_user->is_registered) {
-    // TODO: Send ERR_NOTREGISTERED
+    format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
+                 sender_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
     return -1;
   }
 
@@ -374,14 +380,20 @@ int handle_join_cmd(int sender_fd, char *channel_name) {
 }
 
 int handle_part_cmd(int sender_fd, char *channel_name, char *parting_message) {
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char *sender_nick = sender_user->nick;
+  char reply_buf[BUF_SIZE];
+
   if (channel_name == NULL) {
-    // TODO: Send ERR_NEEDMOREPARAMS
+    format_reply(reply_buf, BUF_SIZE, ERR_NEEDMOREPARAMS, SERVER_NAME, "PART");
     return -1;
   }
 
-  struct User *sender_user = get_user_by_fd(sender_fd);
   if (!sender_user->is_registered) {
-    // TODO: Send ERR_NOTREGISTERED
+    format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
+                 sender_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
     return -1;
   }
 

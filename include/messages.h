@@ -159,6 +159,16 @@
  *  3. The nickname that could not be found
  */
 #define ERR_NOSUCHNICK ":%s 401 %s %s :No such nick/channel\r\n"
+/*
+ * 403 ERR_NOSUCHCHANNEL
+ * Returned when a command refers to a channel name that does not exist.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ *  3. The invalid channel name
+ */
+#define ERR_NOSUCHCHANNEL ":%s 403 %s %s :No such channel\r\n"
 
 /*
  * Returned when a PONG command is sent without a corresponding server/message
@@ -227,6 +237,18 @@
 #define ERR_NICKNAMEINUSE ":%s 433 %s %s :Nickname is already in use\r\n"
 
 /*
+ * 442 ERR_NOTONCHANNEL
+ * Returned when a client tries to perform a channel-based command
+ * on a channel they are not currently a member of.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ *  3. The channel name
+ */
+#define ERR_NOTONCHANNEL ":%s 442 %s %s :You're not on that channel\r\n"
+
+/*
  * 451 ERR_NOTREGISTERED
  * Returned by the server to indicate that the client
  * MUST be registered before the server will allow it
@@ -237,6 +259,18 @@
  *  2. Target Nickname (or "*" if unset)
  */
 #define ERR_NOTREGISTERED ":%s 451 %s :You have not registered\r\n"
+
+/*
+ * 461 ERR_NEEDMOREPARAMS
+ * Returned by the server to indicate that the command sent by the
+ * client did not contain enough parameters.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ *  3. The command name that failed
+ */
+#define ERR_NEEDMOREPARAMS ":%s 461 %s %s :Not enough parameters\r\n"
 
 /*
  * 462 ERR_ALREADYREGISTERED

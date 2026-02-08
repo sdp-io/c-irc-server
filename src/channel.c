@@ -189,25 +189,35 @@ int join_channel(struct User *joining_user, char *channel_name) {
 
 int leave_channel(struct User *parting_user, char *channel_name,
                   char *parting_message) {
-
   struct Channel *searched_channel = get_channel(channel_name);
+  char numeric_reply_buf[BUF_SIZE];
 
   // Searched channel not found, return as failure
   if (searched_channel == NULL) {
-    // TODO: Handle ERR_NOSUCHCHANNEL reply
-    printf("TEST - ERR_NOSUCHCHANNEL\n");
+    char *parting_user_nick = parting_user->nick;
+    int parting_user_fd = parting_user->user_fd;
+
+    format_reply(numeric_reply_buf, BUF_SIZE, ERR_NOSUCHCHANNEL, SERVER_NAME,
+                 parting_user_nick, channel_name);
+
+    send_string(parting_user_fd, numeric_reply_buf, strlen(numeric_reply_buf));
     return -1;
   }
 
   struct UserNode **channel_users = &(searched_channel->user_list);
   if (!channel_has_user(*channel_users, parting_user)) {
-    // TODO: Handle ERR_NOTONCHANNEL reply
-    printf("TEST - ERR_NOTONCHANNEL\n");
+    char *parting_user_nick = parting_user->nick;
+    int parting_user_fd = parting_user->user_fd;
+
+    format_reply(numeric_reply_buf, BUF_SIZE, ERR_NOTONCHANNEL, SERVER_NAME,
+                 parting_user_nick, channel_name);
+
+    send_string(parting_user_fd, numeric_reply_buf, strlen(numeric_reply_buf));
     return -1;
   }
 
+  // Format reply with an empty string if no parting message provided
   if (parting_message == NULL) {
-    // TODO: Handle sending of parting msg to users in channel
     parting_message = "";
   }
 
