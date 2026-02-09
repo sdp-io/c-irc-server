@@ -187,6 +187,41 @@ int join_channel(struct User *joining_user, char *channel_name) {
   return 0;
 }
 
+int delete_channel(char *channel_name) {
+  struct ChannelNode *channel_node_iterator = channels_head;
+  struct ChannelNode *prev_channel_node = NULL;
+  struct Channel *current_channel = channel_node_iterator->channel_info;
+  char *current_channel_name = current_channel->channel_name;
+
+  // Handle removal of channel at head of the linked list
+  if (strcasecmp(current_channel_name, channel_name) == 0) {
+    channels_head = channel_node_iterator->next;
+    free(current_channel_name);
+    free(current_channel);
+    free(channel_node_iterator);
+    return 0;
+  }
+
+  while (channel_node_iterator != NULL) {
+    current_channel = channel_node_iterator->channel_info;
+    current_channel_name = current_channel->channel_name;
+
+    if (strcasecmp(current_channel_name, channel_name) == 0) {
+      prev_channel_node->next = channel_node_iterator->next;
+      free(current_channel_name);
+      free(current_channel);
+      free(channel_node_iterator);
+      return 0;
+    }
+
+    prev_channel_node = channel_node_iterator;
+    channel_node_iterator = channel_node_iterator->next;
+  }
+
+  // Failed to find specified channel in channel list
+  return -1;
+}
+
 int leave_channel(struct User *parting_user, char *channel_name,
                   char *parting_message) {
   struct Channel *searched_channel = get_channel(channel_name);
@@ -247,6 +282,17 @@ int leave_channel(struct User *parting_user, char *channel_name,
     fprintf(stderr, "leave_channel: user %s not found in channel %s\n",
             parting_user_nick, channel_name);
     return -1;
+  }
+
+  // Delete the channel if it now has zero active users
+  if (*channel_users == NULL) {
+    int delete_status = delete_channel(channel_name);
+    if (delete_status == -1) {
+      fprintf(stderr,
+              "leave_channel: error deleting channel %s, channel not found\n",
+              channel_name);
+      return -1;
+    }
   }
 
   return 0;
