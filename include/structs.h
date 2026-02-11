@@ -18,6 +18,7 @@
  * Allows for ease of nickname verification and messaging capabilities.
  */
 struct User {
+  struct ChannelNode *joined_channels;
   char *host_name;
   char *user_name;
   char *real_name;

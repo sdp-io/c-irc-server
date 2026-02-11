@@ -81,6 +81,7 @@ int add_to_users(int user_fd, char *user_host) {
     return -1;
   }
 
+  new_user->joined_channels = NULL;
   new_user->nick = NULL;
   new_user->host_name = host_name;
   new_user->user_name = NULL;
@@ -307,4 +308,18 @@ void set_user_username(int sender_fd, char *user_param, char *mode_param,
                  username, host_name);
     send_string(sender_fd, reply_buf, strlen(reply_buf));
   }
+}
+
+int user_add_channel(struct User *user, struct Channel *new_channel) {
+  struct ChannelNode *new_channel_node = malloc(sizeof(struct ChannelNode));
+  if (new_channel_node == NULL) {
+    fprintf(stderr,
+            "user_add_channel: error allocating memory for new channel node\n");
+    return -1;
+  }
+
+  new_channel_node->channel_info = new_channel;
+  new_channel_node->next = user->joined_channels;
+
+  return 0;
 }

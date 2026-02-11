@@ -1,6 +1,8 @@
 #ifndef USER_H
 #define USER_H
 
+#include "structs.h"
+
 /*
  * Given a user file descriptor and string denoting the user's nickname,
  * allocates memory for a User struct with the provided information and adds it
@@ -59,5 +61,8 @@ extern int get_unknown_user_count(void);
  * Return the number of registered users currently connected to the server.
  */
 extern int get_registered_user_count(void);
+
+// TODO: Add documentation
+extern int user_add_channel(struct User *user, struct Channel *new_channel);
 
 #endif

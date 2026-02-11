@@ -370,9 +370,17 @@ int handle_join_cmd(int sender_fd, char *channel_name) {
     return -1;
   }
 
+  struct Channel *joined_channel = NULL;
   int join_status = join_channel(sender_user, channel_name);
   if (join_status == -1) {
     printf("handle_join_cmd: error joining channel %s\n", channel_name);
+    return -1;
+  }
+
+  int user_status = user_add_channel(sender_user, joined_channel);
+  if (user_status == -1) {
+    printf("handle_join_cmd: error adding channel to user channel list\n");
+    delete_channel(joined_channel);
     return -1;
   }
 

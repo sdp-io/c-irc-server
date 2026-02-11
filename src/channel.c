@@ -96,6 +96,8 @@ int channel_add_user(struct Channel *channel, struct User *new_user) {
   // Insert new user node to head of the user list
   channel->user_list = new_user_node;
 
+  // TODO: Add new channel to new_user channel list either here or in user.c
+
   return 0;
 }
 
@@ -155,7 +157,8 @@ int channel_remove_user(struct UserNode **channel_users,
 }
 
 // JOIN a channel. Add user to list of joined users.
-int join_channel(struct User *joining_user, char *channel_name) {
+int join_channel(struct User *joining_user, char *channel_name,
+                 struct Channel **output_channel) {
   struct Channel *searched_channel = get_channel(channel_name);
 
   // Searched channel not found in list of channels so create it
@@ -172,8 +175,8 @@ int join_channel(struct User *joining_user, char *channel_name) {
 
   struct UserNode *channel_user_list = searched_channel->user_list;
   if (channel_has_user(channel_user_list, joining_user)) {
-    // User already active in the channel, return normally
-    return 0;
+    // User already active in the channel, return status code
+    return 1;
   }
 
   int join_status = channel_add_user(searched_channel, joining_user);
@@ -184,17 +187,20 @@ int join_channel(struct User *joining_user, char *channel_name) {
     return -1;
   }
 
+  // Update the output parameter with the newly created channel
+  *output_channel = searched_channel;
+
   return 0;
 }
 
-int delete_channel(char *channel_name) {
+int delete_channel(struct Channel *target_channel) {
   struct ChannelNode *channel_node_iterator = channels_head;
   struct ChannelNode *prev_channel_node = NULL;
   struct Channel *current_channel = channel_node_iterator->channel_info;
   char *current_channel_name = current_channel->channel_name;
 
   // Handle removal of channel at head of the linked list
-  if (strcasecmp(current_channel_name, channel_name) == 0) {
+  if (current_channel == target_channel) {
     channels_head = channel_node_iterator->next;
     free(current_channel_name);
     free(current_channel);
@@ -206,7 +212,7 @@ int delete_channel(char *channel_name) {
     current_channel = channel_node_iterator->channel_info;
     current_channel_name = current_channel->channel_name;
 
-    if (strcasecmp(current_channel_name, channel_name) == 0) {
+    if (current_channel == target_channel) {
       prev_channel_node->next = channel_node_iterator->next;
       free(current_channel_name);
       free(current_channel);
@@ -286,7 +292,7 @@ int leave_channel(struct User *parting_user, char *channel_name,
 
   // Delete the channel if it now has zero active users
   if (*channel_users == NULL) {
-    int delete_status = delete_channel(channel_name);
+    int delete_status = delete_channel(searched_channel);
     if (delete_status == -1) {
       fprintf(stderr,
               "leave_channel: error deleting channel %s, channel not found\n",
