@@ -149,11 +149,16 @@ void handle_new_connection(int listener, int *fd_count, int *fd_size,
 }
 
 void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
-  char buf[BUF_SIZE]; // Buffer for the receiving of client data
-
   int sender_fd = pfds[*pfd_i].fd;
+  char *sender_buf = get_user_buf(sender_fd);
+  int sender_buf_len = get_user_buf_len(sender_fd);
 
-  int nbytes = recv(sender_fd, buf, sizeof buf, 0);
+  int nbytes = recv(sender_fd, sender_buf + sender_buf_len,
+                    BUF_SIZE - sender_buf_len, 0);
+
+  int total_len = nbytes + sender_buf_len;
+
+  set_user_buf_len(sender_fd, total_len);
 
   if (nbytes <= 0) { // Received error, or the client has closed the connection
     if (nbytes == 0) {
@@ -172,12 +177,41 @@ void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
     // Decrement the pfd iterator to rexamine the slot we just deleted
     (*pfd_i)--;
   } else { // Received some good data from the client
-    printf("pollserver: recv from fd %d: %.*s\n", sender_fd, nbytes, buf);
+    printf("pollserver: recv from fd %d: %.*s\n", sender_fd, nbytes,
+           sender_buf);
 
     // Add a null-terminator to the next open index to create a valid string
-    buf[nbytes] = '\0';
+    sender_buf[total_len] = '\0';
 
-    handle_user_msg(sender_fd, buf);
+    // Grab end of carriage return or line feed sent by lazy clients
+    char *carriage_return_ptr = strrchr(sender_buf, '\n');
+    if (carriage_return_ptr != NULL) {
+      // Received a complete command, begin parsing it
+      int carriage_return_index = carriage_return_ptr - sender_buf;
+      if (sender_buf[carriage_return_index + 1] == '\0') {
+        // No fragmented data, process sender_buf directly
+        handle_user_msg(sender_fd, sender_buf);
+
+        memset(sender_buf, 0, BUF_SIZE);
+        set_user_buf_len(sender_fd, 0);
+      } else {
+        // Fragmented data received, copy good data to temp array
+        int bytes_processed = carriage_return_index + 1;
+
+        char temp_array[bytes_processed + 1]; // Add space for terminator
+        memcpy(temp_array, sender_buf, bytes_processed);
+        temp_array[bytes_processed] = '\0';
+
+        handle_user_msg(sender_fd, temp_array);
+
+        int remaining_bytes = total_len - bytes_processed;
+
+        // Move the unprocessed data to the front of the sender's buffer
+        memmove(sender_buf, sender_buf + bytes_processed, remaining_bytes);
+
+        set_user_buf_len(sender_fd, remaining_bytes);
+      }
+    }
   }
 }
 

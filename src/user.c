@@ -64,6 +64,21 @@ struct User *get_user_by_nick(char *query_nick) {
   return NULL;
 }
 
+char *get_user_buf(int user_fd) {
+  struct User *sender_user = get_user_by_fd(user_fd);
+  return sender_user->user_buf;
+}
+
+int get_user_buf_len(int user_fd) {
+  struct User *sender_user = get_user_by_fd(user_fd);
+  return sender_user->buf_len;
+}
+
+void set_user_buf_len(int user_fd, int new_len) {
+  struct User *sender_user = get_user_by_fd(user_fd);
+  sender_user->buf_len = new_len;
+}
+
 int add_to_users(int user_fd, char *user_host) {
   // Initialize new user to add to linked list of users
   // based on provided parameters
@@ -87,9 +102,11 @@ int add_to_users(int user_fd, char *user_host) {
   new_user->user_name = NULL;
   new_user->real_name = NULL;
   new_user->user_fd = user_fd;
+  new_user->buf_len = 0;
   new_user->has_nick = false;
   new_user->has_username = false;
   new_user->is_registered = false;
+  memset(new_user->user_buf, 0, BUF_SIZE);
 
   // Store in memory the UserNode container to store the user
   struct UserNode *new_user_node = malloc(sizeof(struct UserNode));

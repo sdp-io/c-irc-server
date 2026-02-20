@@ -19,11 +19,13 @@
  */
 struct User {
   struct ChannelNode *joined_channels;
+  char user_buf[BUF_SIZE + 1];
   char *host_name;
   char *user_name;
   char *real_name;
   char *nick;
   int user_fd;
+  int buf_len;
   bool has_username;
   bool has_nick;
   bool is_registered;

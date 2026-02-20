@@ -29,7 +29,7 @@ extern void del_from_users(int user_fd);
  *
  * Returns 0 on success and -1 on failure.
  */
-extern int set_user_nick(int sender_fd, char *sender_nick);
+extern int set_user_nick(int user_fd, char *sender_nick);
 
 /*
  * Handle the setting of a user's username on the server. Handles the sending of
@@ -38,7 +38,7 @@ extern int set_user_nick(int sender_fd, char *sender_nick);
  * provided username and real name and assigns them to the corresponding User
  * struct for the sending user.
  */
-extern void set_user_username(int sender_fd, char *user_param, char *mode_param,
+extern void set_user_username(int user_fd, char *user_param, char *mode_param,
                               char *realname_param);
 
 /*
@@ -50,6 +50,15 @@ extern struct User *get_user_by_fd(int query_fd);
  * Return the User struct associated with the provided nickname.
  */
 extern struct User *get_user_by_nick(char *query_nick);
+
+// TODO: Add documentation
+extern char *get_user_buf(int user_fd);
+
+// TODO: Add documentation
+int get_user_buf_len(int user_fd);
+
+// TODO: Add documentation
+void set_user_buf_len(int user_fd, int new_len);
 
 /*
  * Return the number of unregistered users currently
