@@ -418,11 +418,16 @@ void handle_user_msg(int sender_fd, char *buf) {
   // Split the buffer into individual lines to handle multiple commands received
   // in a single packet
   char *line_saveptr = NULL;
-  char *inner_saveptr = NULL;
   char *user_cmd_line = strtok_r(buf, "\r\n", &line_saveptr);
 
   while (user_cmd_line != NULL) {
-    char *user_cmd = strtok_r(user_cmd_line, " ", &inner_saveptr);
+    // Copy the line so user's buffer is not overwritten and corrupted
+    char line_copy[BUF_SIZE + 1];
+    strncpy(line_copy, user_cmd_line, BUF_SIZE);
+    line_copy[BUF_SIZE] = '\0';
+
+    char *inner_saveptr = NULL;
+    char *user_cmd = strtok_r(line_copy, " ", &inner_saveptr);
 
     // Check if only received carriage return from user
     if (user_cmd == NULL) {
