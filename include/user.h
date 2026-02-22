@@ -51,13 +51,22 @@ extern struct User *get_user_by_fd(int query_fd);
  */
 extern struct User *get_user_by_nick(char *query_nick);
 
-// TODO: Add documentation
+/*
+ * Grabs the User struct associated with a provided user's file descriptor
+ * and returns the user's corresponding buffer.
+ */
 extern char *get_user_buf(int user_fd);
 
-// TODO: Add documentation
+/*
+ * Grabs the User struct associated with a provided user's file descriptor
+ * and returns the length of the user's corresponding buffer.
+ */
 int get_user_buf_len(int user_fd);
 
-// TODO: Add documentation
+/*
+ * Grabs the User struct associated with a provided user's file descriptor
+ * and sets the length of the user's corresponding buffer to a new length.
+ */
 void set_user_buf_len(int user_fd, int new_len);
 
 /*
@@ -71,7 +80,10 @@ extern int get_unknown_user_count(void);
  */
 extern int get_registered_user_count(void);
 
-// TODO: Add documentation
+/*
+ * Allocates memory for a ChannelNode struct to contain the provided channel and
+ * add it to the user's list of currently joined channels.
+ */
 extern int user_add_channel(struct User *user, struct Channel *new_channel);
 
 #endif

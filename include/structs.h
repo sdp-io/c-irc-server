@@ -41,6 +41,11 @@ struct UserNode {
   struct UserNode *next;
 };
 
+/*
+ * Struct which acts as a container for the Channel struct.
+ * Allows for a linked list implementation to traverse, retrieve, and modify
+ * channels that are currently active on the IRC server.
+ */
 struct ChannelNode {
   struct Channel *channel_info;
   struct ChannelNode *next;
