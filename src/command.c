@@ -16,6 +16,9 @@ int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
   char reply_buf[BUF_SIZE];
   int reply_status;
 
+  struct User *target_user = NULL;
+  struct Channel *target_channel = NULL;
+
   // Send ERR_NORECIPIENT numeric is command called is not a NOTICE
   if (recipient_nick == NULL) {
     if (!is_notice) {
@@ -64,10 +67,15 @@ int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
     return -1;
   }
 
-  struct User *recipient_user = get_user_by_nick(recipient_nick);
+  // Message target is a channel
+  if (recipient_nick[0] == '#') {
+    target_channel = get_channel(recipient_nick);
+  } else { // Message target is a user
+    target_user = get_user_by_nick(recipient_nick);
+  }
 
   // Send ERR_NOSUCHNICK numeric if command called is not a NOTICE
-  if (recipient_user == NULL) {
+  if (target_channel == NULL && target_user == NULL) {
     if (!is_notice) {
       format_reply(reply_buf, BUF_SIZE, ERR_NOSUCHNICK, SERVER_NAME,
                    sender_nickname, recipient_nick);
@@ -81,26 +89,21 @@ int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
     return -1;
   }
 
+  // Details for the reply buffer
   char *sender_username = sender_user->user_name;
   char *sender_hostname = sender_user->host_name;
+  char *fmt_string = is_notice ? FMT_NOTICE : FMT_PRIVMSG;
 
   // Format reply to match the command called by the sending user
-  if (!is_notice) {
-    format_reply(reply_buf, BUF_SIZE, FMT_PRIVMSG, sender_nickname,
-                 sender_username, sender_hostname, recipient_nick, message);
-  } else {
-    format_reply(reply_buf, BUF_SIZE, FMT_NOTICE, sender_nickname,
-                 sender_username, sender_hostname, recipient_nick, message);
+  format_reply(reply_buf, BUF_SIZE, fmt_string, sender_nickname,
+               sender_username, sender_hostname, recipient_nick, message);
+
+  if (target_channel != NULL) {
+    channel_message_users(target_channel->user_list, reply_buf, sender_fd);
+  } else { // Target is a user so send directly
+    send_string(target_user->user_fd, reply_buf, strlen(reply_buf));
   }
 
-  reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-  if (reply_status == -1) {
-    struct User *recipient_user = get_user_by_nick(recipient_nick);
-    int recipient_fd = recipient_user->user_fd;
-    fprintf(stderr, "handle_msg_cmd: error sending ERR_NOSUCHNICK to %d\n",
-            recipient_fd);
-    return -1;
-  }
   return 0;
 }
 
@@ -252,8 +255,8 @@ int handle_whois_cmd(int sender_fd, char *query_nick) {
     return -1;
   }
 
-  // Send RPL_WHOISSERVER (format with SERVER_NAME macro directly as we are not
-  // currently a part of a network of servers)
+  // Send RPL_WHOISSERVER (format with SERVER_NAME macro directly as we are
+  // not currently a part of a network of servers)
   format_reply(reply_buf, BUF_SIZE, RPL_WHOISSERVER, SERVER_NAME, query_nick,
                SERVER_NAME, SERVER_INFO);
 
@@ -426,8 +429,8 @@ int handle_part_cmd(int sender_fd, char *channel_name, char *parting_message) {
 }
 
 void handle_user_msg(int sender_fd, char *buf) {
-  // Split the buffer into individual lines to handle multiple commands received
-  // in a single packet
+  // Split the buffer into individual lines to handle multiple commands
+  // received in a single packet
   char *line_saveptr = NULL;
   char *user_cmd_line = strtok_r(buf, "\r\n", &line_saveptr);
 

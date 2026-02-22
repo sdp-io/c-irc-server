@@ -101,7 +101,8 @@ int channel_add_user(struct Channel *channel, struct User *new_user) {
   return 0;
 }
 
-void channel_message_users(struct UserNode *user_list, char *message) {
+void channel_message_users(struct UserNode *user_list, char *message,
+                           int exclude_fd) {
   if (user_list == NULL) {
     return;
   }
@@ -109,7 +110,10 @@ void channel_message_users(struct UserNode *user_list, char *message) {
   struct UserNode *user_node_iterator = user_list;
   while (user_node_iterator != NULL) {
     int iterator_user_fd = user_node_iterator->user_info->user_fd;
-    send_string(iterator_user_fd, message, strlen(message));
+
+    if (iterator_user_fd != exclude_fd) {
+      send_string(iterator_user_fd, message, strlen(message));
+    }
 
     user_node_iterator = user_node_iterator->next;
   }
@@ -272,7 +276,7 @@ int leave_channel(struct User *parting_user, char *channel_name,
                parting_message);
 
   // Send message to every user within the channel user list (including sender)
-  channel_message_users(*channel_users, parting_msg_buf);
+  channel_message_users(*channel_users, parting_msg_buf, -1);
 
   // Then attempt to remove sender from the channel user list
   int part_status = channel_remove_user(channel_users, parting_user);

@@ -34,4 +34,11 @@ extern int leave_channel(struct User *parting_user, char *channel_name,
  */
 extern int delete_channel(struct Channel *target_channel);
 
+// TODO: Add documentation
+extern struct Channel *get_channel(char *channel_name);
+
+// TODO: Add documentation
+extern void channel_message_users(struct UserNode *user_list, char *message,
+                                  int exclude_fd);
+
 #endif
