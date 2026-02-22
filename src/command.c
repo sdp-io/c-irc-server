@@ -359,6 +359,17 @@ int handle_join_cmd(int sender_fd, char *channel_name) {
 
   if (channel_name == NULL) {
     format_reply(reply_buf, BUF_SIZE, ERR_NEEDMOREPARAMS, SERVER_NAME, "JOIN");
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  // IRC channel naming format validation
+  if (channel_name[0] != '#') {
+    format_reply(reply_buf, BUF_SIZE, ERR_NOSUCHCHANNEL, SERVER_NAME,
+                 sender_nick, channel_name);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
     return -1;
   }
 
@@ -371,7 +382,7 @@ int handle_join_cmd(int sender_fd, char *channel_name) {
   }
 
   struct Channel *joined_channel = NULL;
-  int join_status = join_channel(sender_user, channel_name);
+  int join_status = join_channel(sender_user, channel_name, &joined_channel);
   if (join_status == -1) {
     printf("handle_join_cmd: error joining channel %s\n", channel_name);
     return -1;
