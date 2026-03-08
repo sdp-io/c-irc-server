@@ -114,6 +114,12 @@
  */
 #define RPL_ENDOFWHOIS ":%s 318 %s :End of /WHOIS list\r\n"
 
+// TODO: 331 RPL_NOTOPIC Add documentation
+#define RPL_NOTOPIC ":%s 331 %s :No topic is set\r\n"
+
+// TODO: 332 RPL_TOPIC Add documentation
+#define RPL_TOPIC ":%s 332 %s :%s\r\n"
+
 /*
  * 372 RPL_MOTD
  * Contains one line of the Message of the Day text.

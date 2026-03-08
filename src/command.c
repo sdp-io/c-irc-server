@@ -357,7 +357,7 @@ int handle_lusers_cmd(int sender_fd) {
 
 int handle_join_cmd(int sender_fd, char *channel_name) {
   struct User *sender_user = get_user_by_fd(sender_fd);
-  char *sender_nick = sender_user->nick;
+  char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
   char reply_buf[BUF_SIZE];
 
   if (channel_name == NULL) {
@@ -367,7 +367,7 @@ int handle_join_cmd(int sender_fd, char *channel_name) {
     return -1;
   }
 
-  // IRC channel naming format validation
+  // IRC channel naming format validation, channels must be prefixed with '#'
   if (channel_name[0] != '#') {
     format_reply(reply_buf, BUF_SIZE, ERR_NOSUCHCHANNEL, SERVER_NAME,
                  sender_nick, channel_name);
@@ -403,7 +403,7 @@ int handle_join_cmd(int sender_fd, char *channel_name) {
 
 int handle_part_cmd(int sender_fd, char *channel_name, char *parting_message) {
   struct User *sender_user = get_user_by_fd(sender_fd);
-  char *sender_nick = sender_user->nick;
+  char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
   char reply_buf[BUF_SIZE];
 
   if (channel_name == NULL) {
@@ -425,6 +425,63 @@ int handle_part_cmd(int sender_fd, char *channel_name, char *parting_message) {
     return -1;
   }
 
+  return 0;
+}
+
+int handle_topic_cmd(int sender_fd, char *channel_name, char *topic_message) {
+  char reply_buf[BUF_SIZE];
+
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
+  if (!sender_user->is_registered) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
+                 sender_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  struct Channel *target_channel = get_channel(channel_name);
+  if (target_channel == NULL) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NOSUCHCHANNEL, SERVER_NAME,
+                 sender_nick, channel_name);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  if (!channel_has_user(target_channel->user_list, sender_user)) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NOTONCHANNEL, SERVER_NAME,
+                 sender_nick, channel_name);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  // Empty channel topic string provided, remove channel's current topic
+  if (topic_message != NULL && topic_message[0] == '\0') {
+    // TODO: Relay removal of channel's current topic to all users in channel
+    channel_remove_topic(target_channel);
+    return 0;
+  }
+
+  // Channel topic provided, change channel's current topic
+  if (topic_message) {
+    // TODO: Relay setting/changing of channel topic to all users in channel
+    channel_set_topic(target_channel, topic_message);
+    return 0;
+  }
+
+  // No channel topic provided, send channel's current topic to user
+  char *channel_topic = target_channel->topic;
+  if (channel_topic == NULL) {
+    format_reply(reply_buf, BUF_SIZE, RPL_NOTOPIC, SERVER_NAME, channel_name);
+  } else {
+    format_reply(reply_buf, BUF_SIZE, RPL_TOPIC, SERVER_NAME, channel_name,
+                 channel_topic);
+  }
+
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
   return 0;
 }
 
@@ -492,6 +549,15 @@ void handle_user_msg(int sender_fd, char *buf) {
       }
 
       handle_part_cmd(sender_fd, channel_param, message_param);
+    } else if ((strcasecmp(user_cmd, "TOPIC")) == 0) {
+      char *channel_param = strtok_r(NULL, " ", &inner_saveptr);
+      char *topic_param = strtok_r(NULL, "", &inner_saveptr);
+
+      if (topic_param != NULL && topic_param[0] == ':') {
+        topic_param++;
+      }
+
+      handle_topic_cmd(sender_fd, channel_param, topic_param);
     } else if ((strcasecmp(user_cmd, "WHOIS")) == 0) {
       char *nick_param = strtok_r(NULL, " ", &inner_saveptr);
       handle_whois_cmd(sender_fd, nick_param);

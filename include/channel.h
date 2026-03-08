@@ -41,4 +41,14 @@ extern struct Channel *get_channel(char *channel_name);
 extern void channel_message_users(struct UserNode *user_list, char *message,
                                   int exclude_fd);
 
+// TODO: Add documentation
+extern bool channel_has_user(struct UserNode *user_list,
+                             struct User *query_user);
+
+// TODO: Add documentation
+extern void channel_remove_topic(struct Channel *target_channel);
+
+// TODO: Add documentation
+extern void channel_set_topic(struct Channel *target_channel, char *new_topic);
+
 #endif

@@ -66,6 +66,15 @@ struct Channel *get_channel(char *channel_name) {
   return NULL;
 }
 
+void channel_set_topic(struct Channel *target_channel, char *new_topic) {
+  target_channel->topic = strdup(new_topic);
+}
+
+void channel_remove_topic(struct Channel *target_channel) {
+  free(target_channel->topic);
+  target_channel->topic = NULL;
+}
+
 bool channel_has_user(struct UserNode *user_list, struct User *query_user) {
   int query_user_fd = query_user->user_fd;
 
