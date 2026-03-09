@@ -407,7 +407,10 @@ int handle_part_cmd(int sender_fd, char *channel_name, char *parting_message) {
   char reply_buf[BUF_SIZE];
 
   if (channel_name == NULL) {
-    format_reply(reply_buf, BUF_SIZE, ERR_NEEDMOREPARAMS, SERVER_NAME, "PART");
+    format_reply(reply_buf, BUF_SIZE, ERR_NEEDMOREPARAMS, SERVER_NAME,
+                 sender_nick, "PART");
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
     return -1;
   }
 
@@ -440,6 +443,17 @@ int handle_topic_cmd(int sender_fd, char *channel_name, char *topic_message) {
     send_string(sender_fd, reply_buf, strlen(reply_buf));
     return -1;
   }
+  char *sender_username = sender_user->user_name;
+  char *sender_hostname = sender_user->host_name;
+
+  // No provided channel parameter, send ERR_NEEDMOREPARAMS
+  if (channel_name == NULL) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NEEDMOREPARAMS, SERVER_NAME,
+                 sender_nick, "TOPIC");
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
 
   struct Channel *target_channel = get_channel(channel_name);
   if (target_channel == NULL) {
@@ -460,15 +474,26 @@ int handle_topic_cmd(int sender_fd, char *channel_name, char *topic_message) {
 
   // Empty channel topic string provided, remove channel's current topic
   if (topic_message != NULL && topic_message[0] == '\0') {
-    // TODO: Relay removal of channel's current topic to all users in channel
     channel_remove_topic(target_channel);
+
+    // Format reply buffer with FMT_TOPIC and send to all users in channel
+    format_reply(reply_buf, BUF_SIZE, FMT_TOPIC, sender_nick, sender_username,
+                 sender_hostname, channel_name, topic_message);
+
+    channel_message_users(target_channel->user_list, reply_buf, -1);
+
     return 0;
   }
 
   // Channel topic provided, change channel's current topic
   if (topic_message) {
-    // TODO: Relay setting/changing of channel topic to all users in channel
     channel_set_topic(target_channel, topic_message);
+
+    // Format reply buffer with FMT_TOPIC and send to all users in channel
+    format_reply(reply_buf, BUF_SIZE, FMT_TOPIC, sender_nick, sender_username,
+                 sender_hostname, channel_name, topic_message);
+
+    channel_message_users(target_channel->user_list, reply_buf, -1);
     return 0;
   }
 

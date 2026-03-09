@@ -317,6 +317,20 @@
 #define FMT_NOTICE ":%s!%s@%s NOTICE %s :%s\r\n"
 
 /*
+ * FMT_TOPIC
+ * Used to relay the changing of a channel's topic from a sender to all users
+ * active within that channel
+ *
+ * Format Args:
+ *  1. Sender Nickname
+ *  2. Sender Username
+ *  3. Sender Hostname
+ *  4. Target Channel
+ *  5. Contents of the new topic
+ */
+#define FMT_TOPIC ":%s!%s@%s TOPIC %s :%s\r\n"
+
+/*
  * FMT_PART
  * Used to relay a response upon the PARTing of a user from a specified channel.
  * Relays an optional PARTing string to users remaining in the channel.
