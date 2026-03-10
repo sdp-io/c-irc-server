@@ -106,6 +106,8 @@ int add_to_users(int user_fd, char *user_host) {
   new_user->has_nick = false;
   new_user->has_username = false;
   new_user->is_registered = false;
+  new_user->is_oper = false;
+  new_user->is_away = false;
   memset(new_user->user_buf, 0, BUF_SIZE);
 
   // Store in memory the UserNode container to store the user
@@ -340,3 +342,5 @@ int user_add_channel(struct User *user, struct Channel *new_channel) {
 
   return 0;
 }
+
+void user_set_oper(struct User *user) { user->is_oper = true; }

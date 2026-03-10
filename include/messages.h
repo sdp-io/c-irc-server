@@ -155,6 +155,17 @@
 #define RPL_ENDOFMOTD ":%s 376 :End of MOTD command\r\n"
 
 /*
+ * 381 RPL_YOUREOP
+ * Sent back to a client that has successfully used the OPER command
+ * and gained global operator status
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ */
+#define RPL_YOUREOP ":%s 381 %s :You are now an IRC operator\r\n"
+
+/*
  * 401 ERR_NOSUCHNICK
  * Returned to indicate that the nickname parameter supplied to
  * command could not be found within the list of active users.
@@ -289,6 +300,17 @@
  */
 #define ERR_ALREADYREGISTERED                                                  \
   ":%s 462 %s :Unauthorized command (already registered)\r\n"
+
+/*
+ * 464 ERR_PASSWDMISMATCH
+ * Returned to indicated a failed attempt at using the OPER command
+ * due to an incorrect password.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ */
+#define ERR_PASSWDMISMATCH ":%s 464 %s :Password incorrect\r\n"
 
 /*
  * FMT_PRIVMSG

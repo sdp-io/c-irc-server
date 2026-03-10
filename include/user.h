@@ -86,4 +86,9 @@ extern int get_registered_user_count(void);
  */
 extern int user_add_channel(struct User *user, struct Channel *new_channel);
 
+/*
+ * Sets a user's operator status to true
+ */
+extern void user_set_oper(struct User *user);
+
 #endif

@@ -13,9 +13,6 @@ debug: circ
 circ: $(OBJ)
 	$(CC) $^ -o $@ $(LDFLAGS)
 
-run: circ
-	./circ
-
 src/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 

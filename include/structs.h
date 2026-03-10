@@ -13,6 +13,8 @@
 
 #define SERVER_INFO "Insert server information here!"
 
+extern char *oper_password;
+
 /*
  * Struct containing information for a user currently on the IRC server.
  * Allows for ease of nickname verification and messaging capabilities.
@@ -29,6 +31,8 @@ struct User {
   bool has_username;
   bool has_nick;
   bool is_registered;
+  bool is_oper;
+  bool is_away;
 };
 
 /*

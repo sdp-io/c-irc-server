@@ -1,4 +1,5 @@
 #include "network.h"
+#include "structs.h"
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -9,6 +10,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+char *oper_password = NULL;
 
 /*
  * Helper function that handles the initialization of the set of polling file
@@ -46,11 +49,18 @@ int init_pfds(struct pollfd **pfds, int *fd_size, int *fd_count,
  * Main: Create a listener socket and a set of file descriptors to poll.
  * Then, loop forever polling/processing connections.
  */
-int main(void) {
+int main(int argc, char **argv) {
   int listener; // Listening socket file descriptor
   int fd_size;  // Capacity for pfds
   int fd_count; // Total fds currently in pfds
   struct pollfd *pfds;
+
+  // Invalid argument amount
+  if (argc > 2 || argc < 2) {
+    fprintf(stderr, "Invalid arguments!\n");
+    exit(EXIT_FAILURE);
+  }
+  oper_password = argv[1];
 
   if (init_pfds(&pfds, &fd_size, &fd_count, &listener) == -1) {
     fprintf(stderr, "main: error getting listening socket\n");

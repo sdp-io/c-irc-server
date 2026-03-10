@@ -432,6 +432,7 @@ int handle_part_cmd(int sender_fd, char *channel_name, char *parting_message) {
 }
 
 int handle_topic_cmd(int sender_fd, char *channel_name, char *topic_message) {
+  // TODO: Implement ERR_CHANOPRIVISNEEDED after modes are implemented
   char reply_buf[BUF_SIZE];
 
   struct User *sender_user = get_user_by_fd(sender_fd);
@@ -508,6 +509,46 @@ int handle_topic_cmd(int sender_fd, char *channel_name, char *topic_message) {
 
   send_string(sender_fd, reply_buf, strlen(reply_buf));
   return 0;
+}
+
+int handle_oper_cmd(int sender_fd, char *pass_param) {
+  char reply_buf[BUF_SIZE];
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
+
+  if (!sender_user->is_registered) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
+                 sender_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  if (pass_param == NULL) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NEEDMOREPARAMS, SERVER_NAME, "JOIN");
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  if (strcmp(pass_param, oper_password) == 0) {
+    user_set_oper(sender_user);
+
+    format_reply(reply_buf, BUF_SIZE, RPL_YOUREOP, SERVER_NAME, sender_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return 0;
+  } else {
+    format_reply(reply_buf, BUF_SIZE, ERR_PASSWDMISMATCH, SERVER_NAME,
+                 sender_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  // Should theoretically be impossible to reach this point
+  fprintf(stderr, "handle_oper_cmd: an unknown error has occurred\n");
+  return -1;
 }
 
 void handle_user_msg(int sender_fd, char *buf) {
@@ -590,6 +631,17 @@ void handle_user_msg(int sender_fd, char *buf) {
       handle_motd_cmd(sender_fd);
     } else if ((strcasecmp(user_cmd, "LUSERS")) == 0) {
       handle_lusers_cmd(sender_fd);
+    } else if ((strcasecmp(user_cmd, "OPER")) == 0) {
+      // TODO: Implement OPER
+      char *nick_param = strtok_r(NULL, " ", &inner_saveptr);
+      char *pass_param = strtok_r(NULL, " ", &inner_saveptr);
+
+      handle_oper_cmd(sender_fd, pass_param);
+    } else if ((strcasecmp(user_cmd, "AWAY")) == 0) {
+      // TODO: Implement AWAY
+
+    } else if ((strcasecmp(user_cmd, "MODE")) == 0) {
+      // TODO: Implement MODE
     } else if ((strcasecmp(user_cmd, "PING")) == 0) {
       char *message_param = strtok_r(NULL, "", &inner_saveptr);
       handle_ping_cmd(sender_fd, message_param);
