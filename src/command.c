@@ -422,7 +422,8 @@ int handle_part_cmd(int sender_fd, char *channel_name, char *parting_message) {
     return -1;
   }
 
-  int part_status = leave_channel(sender_user, channel_name, parting_message);
+  struct Channel *target_channel = get_channel(channel_name);
+  int part_status = leave_channel(sender_user, target_channel, parting_message);
   if (part_status == -1) {
     printf("handle_part_cmd: error parting from channel %s\n", channel_name);
     return -1;

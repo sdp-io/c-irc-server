@@ -1,3 +1,4 @@
+#include "channel.h"
 #include "messages.h"
 #include "network.h"
 #include "structs.h"
@@ -79,6 +80,53 @@ void set_user_buf_len(int user_fd, int new_len) {
   sender_user->buf_len = new_len;
 }
 
+/*
+ * NOTE: Due to calling leave_channel upon each node, which then calls
+ * user_remove_channel on that specified channel, this currently performs at
+ * O(N^2) time. This is being left for now however, as I plan to refactor the
+ * linked list implementation into a hashmap implementation for Channels and
+ * Users.
+ */
+void user_remove_all(struct User *target_user) {
+  struct ChannelNode *channels_iterator = target_user->joined_channels;
+  struct ChannelNode *next_channel_node = NULL;
+
+  while (channels_iterator != NULL) {
+    next_channel_node = channels_iterator->next;
+
+    // TODO: This will always fail to send to the disconnected user, need
+    // alternative solution
+    leave_channel(target_user, channels_iterator->channel_info, NULL);
+
+    channels_iterator = next_channel_node;
+  }
+}
+
+void user_remove_channel(struct User *target_user,
+                         struct Channel *target_channel) {
+  struct ChannelNode *current_channel_node = target_user->joined_channels;
+
+  // Handle removal of channel at head of user's joined channel list
+  if (current_channel_node->channel_info == target_channel) {
+    target_user->joined_channels = target_user->joined_channels->next;
+    free(current_channel_node);
+    return;
+  }
+
+  struct ChannelNode *prev_channel_node = current_channel_node;
+  current_channel_node = current_channel_node->next;
+  while (current_channel_node != NULL) {
+    if (current_channel_node->channel_info == target_channel) {
+      prev_channel_node->next = current_channel_node->next;
+      free(current_channel_node);
+      return;
+    }
+
+    prev_channel_node = current_channel_node;
+    current_channel_node = current_channel_node->next;
+  }
+}
+
 int add_to_users(int user_fd, char *user_host) {
   // Initialize new user to add to linked list of users
   // based on provided parameters
@@ -148,6 +196,9 @@ void del_from_users(int user_fd) {
       unknown_user_count--;
     }
 
+    // Disconnect user from all joined channels
+    user_remove_all(current_user_info);
+
     users_head = user_node_iterator->next;
     free(current_user_info->nick);
     free(current_user_info->user_name);
@@ -174,6 +225,9 @@ void del_from_users(int user_fd) {
       }
 
       prev_node->next = user_node_iterator->next;
+
+      // Disconnect user from all joined channels
+      user_remove_all(current_user_info);
 
       // Free allocated memory associated with the deleted user
       free(current_user_info->nick);
@@ -340,6 +394,7 @@ int user_add_channel(struct User *user, struct Channel *new_channel) {
 
   new_channel_node->channel_info = new_channel;
   new_channel_node->next = user->joined_channels;
+  user->joined_channels = new_channel_node;
 
   return 0;
 }

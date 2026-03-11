@@ -1,6 +1,7 @@
 #include "messages.h"
 #include "network.h"
 #include "structs.h"
+#include "user.h"
 #include "utils.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -241,13 +242,13 @@ int delete_channel(struct Channel *target_channel) {
   return -1;
 }
 
-int leave_channel(struct User *parting_user, char *channel_name,
+int leave_channel(struct User *parting_user, struct Channel *target_channel,
                   char *parting_message) {
-  struct Channel *searched_channel = get_channel(channel_name);
+  char *channel_name = target_channel->channel_name;
   char numeric_reply_buf[BUF_SIZE];
 
   // Searched channel not found, return as failure
-  if (searched_channel == NULL) {
+  if (target_channel == NULL) {
     char *parting_user_nick = parting_user->nick;
     int parting_user_fd = parting_user->user_fd;
 
@@ -258,7 +259,7 @@ int leave_channel(struct User *parting_user, char *channel_name,
     return -1;
   }
 
-  struct UserNode **channel_users = &(searched_channel->user_list);
+  struct UserNode **channel_users = &(target_channel->user_list);
   if (!channel_has_user(*channel_users, parting_user)) {
     char *parting_user_nick = parting_user->nick;
     int parting_user_fd = parting_user->user_fd;
@@ -303,9 +304,12 @@ int leave_channel(struct User *parting_user, char *channel_name,
     return -1;
   }
 
+  // Remove channel from the user's list of actively joined channels
+  user_remove_channel(parting_user, target_channel);
+
   // Delete the channel if it now has zero active users
   if (*channel_users == NULL) {
-    int delete_status = delete_channel(searched_channel);
+    int delete_status = delete_channel(target_channel);
     if (delete_status == -1) {
       fprintf(stderr,
               "leave_channel: error deleting channel %s, channel not found\n",

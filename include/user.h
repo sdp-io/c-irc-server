@@ -91,4 +91,17 @@ extern int user_add_channel(struct User *user, struct Channel *new_channel);
  */
 extern void user_set_oper(struct User *user);
 
+/*
+ * Searches the list for a channel, and then removes it from the user's list of
+actively joined channels, freeing all memory associated with it.
+*/
+extern void user_remove_channel(struct User *user,
+                                struct Channel *target_channel);
+
+/*
+ * Iterates through each of the user's actively joined channels and parts from
+ * them without a parting message.
+ */
+extern void user_remove_all(struct User *user);
+
 #endif
