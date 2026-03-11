@@ -163,6 +163,7 @@ void del_from_users(int user_fd) {
   // one that must be deleted
   struct UserNode *prev_node = user_node_iterator;
   user_node_iterator = user_node_iterator->next;
+  current_user_info = user_node_iterator->user_info;
   while (user_node_iterator != NULL) {
 
     if (user_node_iterator->user_info->user_fd == user_fd) {
