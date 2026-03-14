@@ -1,6 +1,7 @@
 #ifndef STRUCTS_H
 #define STRUCTS_H
 
+#include "hashmap.h"
 #include <stdbool.h>
 
 #define BUF_SIZE 512
@@ -20,19 +21,21 @@ extern char *oper_password;
  * Allows for ease of nickname verification and messaging capabilities.
  */
 struct User {
-  struct ChannelNode *joined_channels;
+  struct ChannelNode *joined_channels; // TODO: Add hash support for Channels
   char user_buf[BUF_SIZE + 1];
   char *host_name;
   char *user_name;
   char *real_name;
   char *nick;
-  int user_fd;
+  int user_fd; // Will also be used as a key for the hash table
   int buf_len;
   bool has_username;
   bool has_nick;
   bool is_registered;
   bool is_oper;
   bool is_away;
+  UT_hash_handle hh;      // Make this struct hashable
+  UT_hash_handle hh_nick; // Hashable handle for user nick
 };
 
 /*

@@ -1,4 +1,5 @@
 #include "channel.h"
+#include "hashmap.h"
 #include "messages.h"
 #include "network.h"
 #include "structs.h"
@@ -10,7 +11,8 @@
 #include <strings.h>
 
 // Linked list of users for the IRC server
-static struct UserNode *users_head = NULL;
+static struct User *users_fd_map = NULL;
+static struct User *users_nick_map = NULL;
 
 // Count of users currently connected to the IRC Server
 static int unknown_user_count = 0;
@@ -23,46 +25,17 @@ int get_unknown_user_count(void) { return unknown_user_count; }
 int get_registered_user_count(void) { return registered_user_count; }
 
 struct User *get_user_by_fd(int query_fd) {
-  struct UserNode *users_iterator = users_head;
-  struct User *iterator_user = NULL;
+  struct User *searched_user;
 
-  while (users_iterator != NULL) {
-    iterator_user = users_iterator->user_info;
-
-    if (iterator_user->user_fd == query_fd) {
-      return iterator_user;
-    }
-
-    users_iterator = users_iterator->next;
-  }
-  // Queried user not found
-  return NULL;
+  HASH_FIND_INT(users_fd_map, &query_fd, searched_user);
+  return searched_user;
 }
 
 struct User *get_user_by_nick(char *query_nick) {
-  struct UserNode *users_iterator = users_head;
-  struct User *iterator_user = NULL;
-  char *iterator_user_nick = NULL;
+  struct User *searched_user;
 
-  while (users_iterator != NULL) {
-    iterator_user = users_iterator->user_info;
-    iterator_user_nick = iterator_user->nick;
-
-    // Skip all iterations with NULL nicknames
-    if (iterator_user_nick == NULL) {
-      users_iterator = users_iterator->next;
-      continue;
-    }
-
-    if (strcasecmp(query_nick, iterator_user_nick) == 0) {
-      return iterator_user;
-    }
-
-    users_iterator = users_iterator->next;
-  }
-
-  // Queried user not found
-  return NULL;
+  HASH_FIND_PTR(users_nick_map, &query_nick, searched_user);
+  return searched_user;
 }
 
 char *get_user_buf(int user_fd) {
@@ -158,106 +131,39 @@ int add_to_users(int user_fd, char *user_host) {
   new_user->is_away = false;
   memset(new_user->user_buf, 0, BUF_SIZE);
 
-  // Store in memory the UserNode container to store the user
-  struct UserNode *new_user_node = malloc(sizeof(struct UserNode));
-  if (new_user_node == NULL) {
-    free(new_user);
-    free(host_name);
-    fprintf(stderr, "add_to_users: error allocating memory for user node\n");
-    return -1;
-  }
-  new_user_node->user_info = new_user;
-  new_user_node->next = NULL;
+  // Add the new user struct to user_fd hash table
+  HASH_ADD_INT(users_fd_map, user_fd, new_user);
 
-  // Assign new user to head of users linked list and increment user count
-  new_user_node->next = users_head;
-  users_head = new_user_node;
   unknown_user_count++;
 
   return 0;
 }
 
 void del_from_users(int user_fd) {
-  struct UserNode *user_node_iterator = users_head;
+  struct User *target_user = get_user_by_fd(user_fd);
 
-  if (user_node_iterator == NULL) {
-    fprintf(stderr, "del_from_users: no list to delete from!");
-    return;
-  }
+  // Remove user from nick and fd hash tables
+  HASH_DELETE(hh, users_fd_map, target_user);
+  HASH_DELETE(hh_nick, users_nick_map, target_user);
 
-  struct User *current_user_info = user_node_iterator->user_info;
-  int iterator_fd = current_user_info->user_fd;
+  // Disconnect user from all joined channels
+  user_remove_all(target_user);
 
-  // Handle removal of user at head of the linked list
-  if (iterator_fd == user_fd) {
-    if (current_user_info->is_registered) {
-      registered_user_count--;
-    } else {
-      unknown_user_count--;
-    }
-
-    // Disconnect user from all joined channels
-    user_remove_all(current_user_info);
-
-    users_head = user_node_iterator->next;
-    free(current_user_info->nick);
-    free(current_user_info->user_name);
-    free(current_user_info->real_name);
-    free(current_user_info->host_name);
-    free(current_user_info);
-    free(user_node_iterator);
-
-    return;
-  }
-
-  // Traverse the linked list of active users comparing each user's fd to the
-  // one that must be deleted
-  struct UserNode *prev_node = user_node_iterator;
-  user_node_iterator = user_node_iterator->next;
-  current_user_info = user_node_iterator->user_info;
-  while (user_node_iterator != NULL) {
-
-    if (user_node_iterator->user_info->user_fd == user_fd) {
-      if (current_user_info->is_registered) {
-        registered_user_count--;
-      } else {
-        unknown_user_count--;
-      }
-
-      prev_node->next = user_node_iterator->next;
-
-      // Disconnect user from all joined channels
-      user_remove_all(current_user_info);
-
-      // Free allocated memory associated with the deleted user
-      free(current_user_info->nick);
-      free(current_user_info->user_name);
-      free(current_user_info->real_name);
-      free(current_user_info->host_name);
-      free(current_user_info);
-      free(user_node_iterator);
-
-      return;
-    }
-
-    prev_node = user_node_iterator;
-    user_node_iterator = user_node_iterator->next;
-    current_user_info = user_node_iterator->user_info;
-  }
-
-  // The specified fd was not found within the list of user fds
-  fprintf(stderr, "del_from_users: unable to delete specified user %d\n",
-          user_fd);
+  free(target_user->nick);
+  free(target_user->user_name);
+  free(target_user->real_name);
+  free(target_user->host_name);
+  free(target_user);
 }
 
 int set_user_nick(int sender_fd, char *sender_nick) {
   // Buffer to send the corresponding numeric reply back to the sending user
   char reply_buf[BUF_SIZE];
+  struct User *sender_user = get_user_by_fd(sender_fd);
 
   // If nick contains invalid characters, do not need to verify its availability
   if (!is_valid_nick(sender_nick)) {
     // Format and send ERR_ERRONEOUSNICKNAME numeric reply
-    struct User *sender_user = get_user_by_fd(sender_fd);
     char *current_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
 
     format_reply(reply_buf, BUF_SIZE, ERR_ERRONEOUSNICKNAME, SERVER_NAME,
@@ -268,66 +174,44 @@ int set_user_nick(int sender_fd, char *sender_nick) {
     return -1;
   }
 
-  // User struct to capture the user after list iteration
-  struct User *sender = NULL;
-  struct User *iterator_user = NULL; // Track user at each list iteration
+  if (get_user_by_nick(sender_nick) != NULL) {
+    // Specified nick is taken, format and send ERR_NICKNAMEINUSE numeric
+    char *current_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
 
-  // Get the sender's User struct from the list of active users
-  // AND check if sender's nick is taken
-  struct UserNode *users_iterator = users_head;
-  while (users_iterator != NULL) {
-    // Unpack user_info from current UserNode to make comparisons
-    iterator_user = users_iterator->user_info;
+    format_reply(reply_buf, BUF_SIZE, ERR_NICKNAMEINUSE, SERVER_NAME,
+                 current_nick, sender_nick);
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
 
-    // Check if current iterators user is same as sender
-    if (iterator_user->user_fd == sender_fd) {
-      sender = iterator_user;
-    }
-
-    // Prevent null comparisons with uninitialized active users in the user list
-    if (iterator_user->nick == NULL) {
-      users_iterator = users_iterator->next;
-      continue;
-    }
-
-    // Compare current iterations user nick to nick param given by sender
-    if ((strcasecmp(iterator_user->nick, sender_nick)) == 0) {
-      // Specified nick is taken, format and send ERR_NICKNAMEINUSE numeric
-      char *current_nick = (sender->nick != NULL) ? sender->nick : "*";
-
-      format_reply(reply_buf, BUF_SIZE, ERR_NICKNAMEINUSE, SERVER_NAME,
-                   current_nick, sender_nick);
-      send_string(sender_fd, reply_buf, strlen(reply_buf));
-
-      return -1;
-    }
-
-    users_iterator = users_iterator->next;
+    return -1;
   }
 
-  // If sender has a pre-existing nick, free it.
-  if (sender->nick != NULL) {
-    free(sender->nick);
+  // If sender has a pre-existing nick, free it and remove from the nick table
+  if (sender_user->nick != NULL) {
+    free(sender_user->nick);
+    HASH_DEL(users_nick_map, sender_user);
   }
 
   // Allocate memory for the new nick and update user state
-  sender->nick = strdup(sender_nick);
-  sender->has_nick = true;
+  sender_user->nick = strdup(sender_nick);
+  sender_user->has_nick = true;
 
-  bool has_nick = sender->has_nick;
-  bool has_username = sender->has_username;
-  bool is_registered = sender->is_registered;
+  bool has_nick = sender_user->has_nick;
+  bool has_username = sender_user->has_username;
+  bool is_registered = sender_user->is_registered;
+
+  HASH_ADD_KEYPTR(hh_nick, users_nick_map, &sender_nick, strlen(sender_nick),
+                  sender_user);
 
   // User successfully registered, change registration status and send
   // RPL_WELCOME
   if (has_nick && has_username && !is_registered) {
-    sender->is_registered = true;
+    sender_user->is_registered = true;
     registered_user_count++;
     unknown_user_count--;
 
-    char *nick = sender->nick;
-    char *username = sender->user_name;
-    char *host_name = sender->host_name;
+    char *nick = sender_user->nick;
+    char *username = sender_user->user_name;
+    char *host_name = sender_user->host_name;
 
     char reply_buf[BUF_SIZE];
     format_reply(reply_buf, BUF_SIZE, RPL_WELCOME, SERVER_NAME, nick, nick,
