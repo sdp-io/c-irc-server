@@ -1,3 +1,4 @@
+#include "hashmap.h"
 #include "messages.h"
 #include "network.h"
 #include "structs.h"
@@ -9,7 +10,7 @@
 #include <string.h>
 #include <strings.h>
 
-static struct ChannelNode *channels_head = NULL;
+static struct Channel *channels_map = NULL;
 
 // When a channel is JOIN'd that does not exist, this function is called to
 // create it.
@@ -33,38 +34,18 @@ struct Channel *create_channel(char *channel_name) {
   new_channel->user_list = NULL;
   new_channel->topic = NULL;
 
-  struct ChannelNode *new_channel_node = malloc(sizeof(struct ChannelNode));
-  if (new_channel_node == NULL) {
-    fprintf(stderr,
-            "create_channel: error allocating memory for new channel node\n");
-    free(new_channel_name);
-    free(new_channel);
-    return NULL;
-  }
-
-  new_channel_node->channel_info = new_channel;
-  new_channel_node->next = channels_head;
-
-  channels_head = new_channel_node;
+  HASH_ADD_KEYPTR(hh_global, channels_map, new_channel_name,
+                  strlen(new_channel_name), new_channel);
 
   return new_channel;
 }
 
 struct Channel *get_channel(char *channel_name) {
-  struct ChannelNode *channel_node_iterator = channels_head;
+  struct Channel *searched_channel;
+  HASH_FIND(hh_global, channels_map, channel_name, strlen(channel_name),
+            searched_channel);
 
-  while (channel_node_iterator != NULL) {
-    struct Channel *current_channel = channel_node_iterator->channel_info;
-    char *current_channel_name = current_channel->channel_name;
-
-    if (strcasecmp(current_channel_name, channel_name) == 0) {
-      return current_channel;
-    }
-
-    channel_node_iterator = channel_node_iterator->next;
-  }
-
-  return NULL;
+  return searched_channel;
 }
 
 void channel_set_topic(struct Channel *target_channel, char *new_topic) {
@@ -208,38 +189,11 @@ int join_channel(struct User *joining_user, char *channel_name,
 }
 
 int delete_channel(struct Channel *target_channel) {
-  struct ChannelNode *channel_node_iterator = channels_head;
-  struct ChannelNode *prev_channel_node = NULL;
-  struct Channel *current_channel = channel_node_iterator->channel_info;
-  char *current_channel_name = current_channel->channel_name;
+  HASH_DELETE(hh_global, channels_map, target_channel);
+  free(target_channel->channel_name);
+  free(target_channel);
 
-  // Handle removal of channel at head of the linked list
-  if (current_channel == target_channel) {
-    channels_head = channel_node_iterator->next;
-    free(current_channel_name);
-    free(current_channel);
-    free(channel_node_iterator);
-    return 0;
-  }
-
-  while (channel_node_iterator != NULL) {
-    current_channel = channel_node_iterator->channel_info;
-    current_channel_name = current_channel->channel_name;
-
-    if (current_channel == target_channel) {
-      prev_channel_node->next = channel_node_iterator->next;
-      free(current_channel_name);
-      free(current_channel);
-      free(channel_node_iterator);
-      return 0;
-    }
-
-    prev_channel_node = channel_node_iterator;
-    channel_node_iterator = channel_node_iterator->next;
-  }
-
-  // Failed to find specified channel in channel list
-  return -1;
+  return 0;
 }
 
 int leave_channel(struct User *parting_user, struct Channel *target_channel,

@@ -61,43 +61,20 @@ void set_user_buf_len(int user_fd, int new_len) {
  * Users.
  */
 void user_remove_all(struct User *target_user) {
-  struct ChannelNode *channels_iterator = target_user->joined_channels;
-  struct ChannelNode *next_channel_node = NULL;
+  struct Channel *current_channel, *temp;
 
-  while (channels_iterator != NULL) {
-    next_channel_node = channels_iterator->next;
-
-    // TODO: This will always fail to send to the disconnected user, need
-    // alternative solution
-    leave_channel(target_user, channels_iterator->channel_info, NULL);
-
-    channels_iterator = next_channel_node;
+  HASH_ITER(hh_user, target_user->joined_channels, current_channel, temp) {
+    HASH_DELETE(hh_user, target_user->joined_channels, current_channel);
+    // TODO: Free memory allocated to empty channels in channel.c after hash
+    // table refactor
   }
 }
 
+// TODO: This will always fail to send to the disconnected user, need
+// alternative solution
 void user_remove_channel(struct User *target_user,
                          struct Channel *target_channel) {
-  struct ChannelNode *current_channel_node = target_user->joined_channels;
-
-  // Handle removal of channel at head of user's joined channel list
-  if (current_channel_node->channel_info == target_channel) {
-    target_user->joined_channels = target_user->joined_channels->next;
-    free(current_channel_node);
-    return;
-  }
-
-  struct ChannelNode *prev_channel_node = current_channel_node;
-  current_channel_node = current_channel_node->next;
-  while (current_channel_node != NULL) {
-    if (current_channel_node->channel_info == target_channel) {
-      prev_channel_node->next = current_channel_node->next;
-      free(current_channel_node);
-      return;
-    }
-
-    prev_channel_node = current_channel_node;
-    current_channel_node = current_channel_node->next;
-  }
+  HASH_DELETE(hh_user, target_user->joined_channels, target_channel);
 }
 
 int add_to_users(int user_fd, char *user_host) {
@@ -268,19 +245,9 @@ void set_user_username(int sender_fd, char *user_param, char *mode_param,
   }
 }
 
-int user_add_channel(struct User *user, struct Channel *new_channel) {
-  struct ChannelNode *new_channel_node = malloc(sizeof(struct ChannelNode));
-  if (new_channel_node == NULL) {
-    fprintf(stderr,
-            "user_add_channel: error allocating memory for new channel node\n");
-    return -1;
-  }
-
-  new_channel_node->channel_info = new_channel;
-  new_channel_node->next = user->joined_channels;
-  user->joined_channels = new_channel_node;
-
-  return 0;
+void user_add_channel(struct User *user, struct Channel *new_channel) {
+  HASH_ADD_KEYPTR(hh_user, user->joined_channels, new_channel->channel_name,
+                  strlen(new_channel->channel_name), new_channel);
 }
 
 void user_set_oper(struct User *user) { user->is_oper = true; }

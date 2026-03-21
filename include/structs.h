@@ -21,7 +21,7 @@ extern char *oper_password;
  * Allows for ease of nickname verification and messaging capabilities.
  */
 struct User {
-  struct ChannelNode *joined_channels; // TODO: Add hash support for Channels
+  struct Channel *joined_channels; // Hash table for user's active channels
   char user_buf[BUF_SIZE + 1];
   char *host_name;
   char *user_name;
@@ -67,6 +67,8 @@ struct Channel {
   char *channel_name;
   char *topic;
   struct UserNode *user_list;
+  UT_hash_handle hh_global;
+  UT_hash_handle hh_user;
 };
 
 #endif
