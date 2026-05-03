@@ -95,10 +95,11 @@ int add_to_users(int user_fd, char *user_host) {
   }
 
   new_user->joined_channels = NULL;
-  new_user->nick = NULL;
   new_user->host_name = host_name;
   new_user->user_name = NULL;
   new_user->real_name = NULL;
+  new_user->nick = NULL;
+  new_user->away_msg = NULL;
   new_user->user_fd = user_fd;
   new_user->buf_len = 0;
   new_user->has_nick = false;

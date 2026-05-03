@@ -6,6 +6,7 @@
 #include "utils.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
@@ -553,6 +554,46 @@ int handle_oper_cmd(int sender_fd, char *pass_param) {
   return -1;
 }
 
+int handle_away_cmd(int sender_fd, char *away_msg) {
+  char reply_buf[BUF_SIZE];
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
+
+  if (!sender_user->is_registered) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
+                 sender_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  if (away_msg != NULL) {
+    // Free pre-existing away_msg which is either a string or NULL
+    free(away_msg);
+
+    // Set user's away message
+    sender_user->away_msg = strdup(away_msg);
+    sender_user->is_away = false;
+
+    format_reply(reply_buf, BUF_SIZE, RPL_NOWAWAY, SERVER_NAME, sender_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+    return 0;
+  }
+
+  // No away message provided, clear current away message and UNAWAY the user
+  free(sender_user->away_msg);
+  sender_user->away_msg = NULL;
+  sender_user->is_away = false;
+
+  format_reply(reply_buf, BUF_SIZE, RPL_UNAWAY, SERVER_NAME, sender_nick);
+
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+  return 0;
+}
+
 void handle_user_msg(int sender_fd, char *buf) {
   // Split the buffer into individual lines to handle multiple commands
   // received in a single packet
@@ -641,7 +682,13 @@ void handle_user_msg(int sender_fd, char *buf) {
       handle_oper_cmd(sender_fd, pass_param);
     } else if ((strcasecmp(user_cmd, "AWAY")) == 0) {
       // TODO: Implement AWAY
+      char *away_msg = strtok_r(NULL, " ", &inner_saveptr);
 
+      if (away_msg != NULL && away_msg[0] == ':') {
+        away_msg++;
+      }
+
+      handle_away_cmd(sender_fd, away_msg);
     } else if ((strcasecmp(user_cmd, "MODE")) == 0) {
       // TODO: Implement MODE
     } else if ((strcasecmp(user_cmd, "PING")) == 0) {

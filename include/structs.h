@@ -23,10 +23,11 @@ extern char *oper_password;
 struct User {
   struct Channel *joined_channels; // Hash table for user's active channels
   char user_buf[BUF_SIZE + 1];
+  char *nick;
   char *host_name;
   char *user_name;
   char *real_name;
-  char *nick;
+  char *away_msg;
   int user_fd; // Will also be used as a key for the hash table
   int buf_len;
   bool has_username;

@@ -75,6 +75,27 @@
 #define RPL_LUSERME ":%s 255 :I have %d clients and %d servers\r\n"
 
 /*
+ * 305 RPL_UNAWAY
+ * Sent to a client to confirm that they are no longer marked as being away.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ */
+#define RPL_UNAWAY ":%s 305 %s :You are no longer marked as being away\r\n"
+
+/*
+ * 306 RPL_NOWAWAY
+ * Sent to a client to confirm that they have been successfully marked as being
+ * away.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ */
+#define RPL_NOWAWAY ":%s 306 %s :You have been marked as being away\r\n"
+
+/*
  * 311 RPL_WHOISUSER
  * One of the replies to the WHOIS command. Contains the specific
  * user information for the target nickname.
