@@ -34,7 +34,9 @@ struct User *get_user_by_fd(int query_fd) {
 struct User *get_user_by_nick(char *query_nick) {
   struct User *searched_user;
 
-  HASH_FIND_PTR(users_nick_map, &query_nick, searched_user);
+  HASH_FIND(hh_nick, users_nick_map, query_nick, strlen(query_nick),
+            searched_user);
+
   return searched_user;
 }
 
@@ -165,8 +167,9 @@ int set_user_nick(int sender_fd, char *sender_nick) {
 
   // If sender has a pre-existing nick, free it and remove from the nick table
   if (sender_user->nick != NULL) {
-    free(sender_user->nick);
     HASH_DEL(users_nick_map, sender_user);
+    free(sender_user->nick);
+    sender_user->nick = NULL;
   }
 
   // Allocate memory for the new nick and update user state
@@ -177,8 +180,8 @@ int set_user_nick(int sender_fd, char *sender_nick) {
   bool has_username = sender_user->has_username;
   bool is_registered = sender_user->is_registered;
 
-  HASH_ADD_KEYPTR(hh_nick, users_nick_map, &sender_nick, strlen(sender_nick),
-                  sender_user);
+  HASH_ADD_KEYPTR(hh_nick, users_nick_map, sender_user->nick,
+                  strlen(sender_user->nick), sender_user);
 
   // User successfully registered, change registration status and send
   // RPL_WELCOME
