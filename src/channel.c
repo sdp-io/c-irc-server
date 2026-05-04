@@ -12,6 +12,20 @@
 
 static struct Channel *channels_map = NULL;
 
+struct Channel *channel_get_head(void) { return channels_map; }
+
+struct Channel *channel_get_next(struct Channel *current_channel) {
+  if (current_channel == NULL) {
+    return NULL;
+  }
+
+  return current_channel->hh_global.next;
+}
+
+char *channel_get_topic(struct Channel *target_channel) {
+  return target_channel->topic != NULL ? target_channel->topic : "";
+}
+
 // When a channel is JOIN'd that does not exist, this function is called to
 // create it.
 struct Channel *create_channel(char *channel_name) {
@@ -32,6 +46,7 @@ struct Channel *create_channel(char *channel_name) {
 
   new_channel->channel_name = new_channel_name;
   new_channel->user_list = NULL;
+  new_channel->total_users = 0;
   new_channel->topic = NULL;
 
   HASH_ADD_KEYPTR(hh_global, channels_map, new_channel_name,
@@ -86,6 +101,7 @@ int channel_add_user(struct Channel *channel, struct User *new_user) {
 
   // Insert new user node to head of the user list
   channel->user_list = new_user_node;
+  channel->total_users += 1;
 
   // TODO: Add new channel to new_user channel list either here or in user.c
 
@@ -260,6 +276,7 @@ int leave_channel(struct User *parting_user, struct Channel *target_channel,
 
   // Remove channel from the user's list of actively joined channels
   user_remove_channel(parting_user, target_channel);
+  target_channel->total_users -= 1;
 
   // Delete the channel if it now has zero active users
   if (*channel_users == NULL) {

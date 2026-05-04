@@ -148,6 +148,30 @@
  */
 #define RPL_ENDOFWHOIS ":%s 318 %s :End of /WHOIS list\r\n"
 
+/*
+ * 322 RPL_LIST
+ * Sent as a response to the LIST command to provide information about all
+ * channels on the server, or a singular channel on the server.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname (The user requesting the info)
+ *  3. Channel Name
+ *  4. Number of users in the channel
+ *  5. Channel topic
+ */
+#define RPL_LIST ":%s 322 %s %s %d :%s\r\n"
+
+/*
+ * 323 RPL_LISTEND
+ * Sent to indicate the end of a LIST response sequence
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ */
+#define RPL_LISTEND ":%s 323 %s :End of LIST\r\n"
+
 // TODO: 331 RPL_NOTOPIC Add documentation
 #define RPL_NOTOPIC ":%s 331 %s :No topic is set\r\n"
 

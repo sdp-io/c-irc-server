@@ -617,6 +617,58 @@ int handle_away_cmd(int sender_fd, char *away_msg) {
   return 0;
 }
 
+int handle_list_cmd(int sender_fd, char *channel_name) {
+  char reply_buf[BUF_SIZE];
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
+
+  if (!sender_user->is_registered) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
+                 sender_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  // Handle LIST queries for a singular channel on the network
+  if (channel_name != NULL) {
+    struct Channel *target_channel = get_channel(channel_name);
+    if (target_channel != NULL) {
+      char *channel_name = target_channel->channel_name;
+      int total_users = target_channel->total_users;
+      char *topic = channel_get_topic(target_channel);
+
+      format_reply(reply_buf, BUF_SIZE, RPL_LIST, SERVER_NAME, sender_nick,
+                   channel_name, total_users, topic);
+
+      send_string(sender_fd, reply_buf, strlen(reply_buf));
+    }
+
+    format_reply(reply_buf, BUF_SIZE, RPL_LISTEND, SERVER_NAME, sender_nick);
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return 0;
+  }
+
+  // Handle LIST queries for all channels on the network
+  struct Channel *channels_iterator = channel_get_head();
+  while (channels_iterator != NULL) {
+    char *channel_name = channels_iterator->channel_name;
+    int total_users = channels_iterator->total_users;
+    char *topic = channel_get_topic(channels_iterator);
+
+    format_reply(reply_buf, BUF_SIZE, RPL_LIST, SERVER_NAME, sender_nick,
+                 channel_name, total_users, topic);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+    channels_iterator = channel_get_next(channels_iterator);
+  }
+
+  format_reply(reply_buf, BUF_SIZE, RPL_LISTEND, SERVER_NAME, sender_nick);
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
+  return 0;
+}
+
 void handle_user_msg(int sender_fd, char *buf) {
   // Split the buffer into individual lines to handle multiple commands
   // received in a single packet
@@ -704,7 +756,6 @@ void handle_user_msg(int sender_fd, char *buf) {
 
       handle_oper_cmd(sender_fd, pass_param);
     } else if ((strcasecmp(user_cmd, "AWAY")) == 0) {
-      // TODO: Implement AWAY
       char *away_msg = strtok_r(NULL, "", &inner_saveptr);
 
       if (away_msg != NULL && away_msg[0] == ':') {
@@ -714,6 +765,14 @@ void handle_user_msg(int sender_fd, char *buf) {
       handle_away_cmd(sender_fd, away_msg);
     } else if ((strcasecmp(user_cmd, "MODE")) == 0) {
       // TODO: Implement MODE
+    } else if ((strcasecmp(user_cmd, "LIST")) == 0) {
+      char *channel_param = strtok_r(NULL, " ", &inner_saveptr);
+
+      if (channel_param != NULL && channel_param[0] == ':') {
+        channel_param++;
+      }
+
+      handle_list_cmd(sender_fd, channel_param);
     } else if ((strcasecmp(user_cmd, "PING")) == 0) {
       char *message_param = strtok_r(NULL, "", &inner_saveptr);
       handle_ping_cmd(sender_fd, message_param);

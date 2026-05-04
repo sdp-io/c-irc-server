@@ -65,6 +65,7 @@ struct ChannelNode {
  * interaction.
  */
 struct Channel {
+  int total_users;
   char *channel_name;
   char *topic;
   struct UserNode *user_list;

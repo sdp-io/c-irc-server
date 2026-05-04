@@ -51,4 +51,23 @@ extern void channel_remove_topic(struct Channel *target_channel);
 // TODO: Add documentation
 extern void channel_set_topic(struct Channel *target_channel, char *new_topic);
 
+/*
+ * Returns the first active channel on the IRC server or NULL if it does not
+ * exist. Used to begin iteration of channels currently on the server.
+ */
+extern struct Channel *channel_get_head(void);
+
+/*
+ * Retrieves the next active channel within the list of channels currently on
+ * the IRC server. Returns NULL if the end of the list has been reached.
+ *
+ */
+extern struct Channel *channel_get_next(struct Channel *current_channel);
+
+/*
+ * Returns a printable string of the target channel's current topic. If the
+ * channel does not have a currently set topic, returns an empty string.
+ */
+extern char *channel_get_topic(struct Channel *target_channel);
+
 #endif
