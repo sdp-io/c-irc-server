@@ -75,6 +75,19 @@
 #define RPL_LUSERME ":%s 255 :I have %d clients and %d servers\r\n"
 
 /*
+ * 301 RPL_AWAY
+ * Sent as a response to a PRIVMSG command being sent to a target that is
+ * currently away.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ *  3. Recipient Nickname
+ *  3. Recipient's Away Message
+ */
+#define RPL_AWAY ":%s 301 %s %s :%s\r\n"
+
+/*
  * 305 RPL_UNAWAY
  * Sent to a client to confirm that they are no longer marked as being away.
  *

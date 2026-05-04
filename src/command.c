@@ -72,25 +72,48 @@ int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
   if (recipient_nick[0] == '#') {
     target_channel = get_channel(recipient_nick);
   } else { // Message target is a user
+    printf("PRIVMSG: calling target_user\n");
     target_user = get_user_by_nick(recipient_nick);
   }
 
   // Send ERR_NOSUCHNICK numeric if command called is not a NOTICE
   if (target_channel == NULL && target_user == NULL) {
-    if (!is_notice) {
-      format_reply(reply_buf, BUF_SIZE, ERR_NOSUCHNICK, SERVER_NAME,
-                   sender_nickname, recipient_nick);
-
-      reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-      if (reply_status == -1) {
-        fprintf(stderr, "handle_msg_cmd: error sending ERR_NOSUCHNICK to %d\n",
-                sender_fd);
-      }
+    if (is_notice) {
+      // Return silently if called command is a NOTICE
+      return -1;
     }
+
+    format_reply(reply_buf, BUF_SIZE, ERR_NOSUCHNICK, SERVER_NAME,
+                 sender_nickname, recipient_nick);
+
+    reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
+    if (reply_status == -1) {
+      fprintf(stderr, "handle_msg_cmd: error sending ERR_NOSUCHNICK to %d\n",
+              sender_fd);
+    }
+
     return -1;
   }
 
-  // Details for the reply buffer
+  // If user is away, reply with 301 RPL_AWAY numeric
+  if (target_user != NULL && target_user->is_away) {
+    if (is_notice) {
+      // Return silently if called command is a NOTICE
+      return 0;
+    }
+
+    format_reply(reply_buf, BUF_SIZE, RPL_AWAY, SERVER_NAME, sender_nickname,
+                 target_user->nick, target_user->away_msg);
+    reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
+    if (reply_status == -1) {
+      fprintf(stderr, "handle_msg_cmd: error sending RPL_AWAY to %d\n",
+              sender_fd);
+    }
+
+    return 0;
+  }
+
+  // Otherwise prepare to send the message to the target
   char *sender_username = sender_user->user_name;
   char *sender_hostname = sender_user->host_name;
   char *fmt_string = is_notice ? FMT_NOTICE : FMT_PRIVMSG;
@@ -569,11 +592,11 @@ int handle_away_cmd(int sender_fd, char *away_msg) {
 
   if (away_msg != NULL) {
     // Free pre-existing away_msg which is either a string or NULL
-    free(away_msg);
+    free(sender_user->away_msg);
 
     // Set user's away message
     sender_user->away_msg = strdup(away_msg);
-    sender_user->is_away = false;
+    sender_user->is_away = true;
 
     format_reply(reply_buf, BUF_SIZE, RPL_NOWAWAY, SERVER_NAME, sender_nick);
 
@@ -682,7 +705,7 @@ void handle_user_msg(int sender_fd, char *buf) {
       handle_oper_cmd(sender_fd, pass_param);
     } else if ((strcasecmp(user_cmd, "AWAY")) == 0) {
       // TODO: Implement AWAY
-      char *away_msg = strtok_r(NULL, " ", &inner_saveptr);
+      char *away_msg = strtok_r(NULL, "", &inner_saveptr);
 
       if (away_msg != NULL && away_msg[0] == ':') {
         away_msg++;
