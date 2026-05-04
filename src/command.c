@@ -410,7 +410,10 @@ int handle_join_cmd(int sender_fd, char *channel_name) {
 
   struct Channel *joined_channel = NULL;
   int join_status = join_channel(sender_user, channel_name, &joined_channel);
-  if (join_status == -1) {
+  if (join_status == 1) {
+    // User is already in the target channel, return silently
+    return 0;
+  } else if (join_status == -1) {
     printf("handle_join_cmd: error joining channel %s\n", channel_name);
     return -1;
   }
