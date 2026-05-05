@@ -71,8 +71,8 @@ struct Channel {
   char *channel_name; // Uses format "#channel"
   char *topic;
   struct UserNode *user_list;
-  UT_hash_handle hh_global;
-  UT_hash_handle hh_user;
+  UT_hash_handle hh_global; // Hash handle for all channels on the server
+  UT_hash_handle hh_user;   // Hash handle for channels in a user's channel list
 };
 
 #endif

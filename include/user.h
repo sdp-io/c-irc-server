@@ -42,6 +42,25 @@ extern void set_user_username(int user_fd, char *user_param, char *mode_param,
                               char *realname_param);
 
 /*
+ * Compares the list of joined channels for the requester user with the joined
+ * channels of the candidate user. If the two users share a common channel,
+ * returns true. Otherwise, returns false.
+ */
+extern bool users_share_channel(struct User *requester, struct User *candidate);
+
+/*
+ * Returns the first user with a NICK on the IRC server or NULL if it does not
+ * exist. Used to begin iteration of users with a nick currently on the server.
+ */
+extern struct User *user_get_head(void);
+
+/*
+ * Retrieves the next user within the list of users with a NICK currently on the
+ * IRC server. Returns NULL if the end of the list has been reached.
+ */
+extern struct User *user_get_next(struct User *current_user);
+
+/*
  * Return the User struct associated with the provided file descriptor.
  */
 extern struct User *get_user_by_fd(int query_fd);

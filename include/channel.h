@@ -60,7 +60,6 @@ extern struct Channel *channel_get_head(void);
 /*
  * Retrieves the next active channel within the list of channels currently on
  * the IRC server. Returns NULL if the end of the list has been reached.
- *
  */
 extern struct Channel *channel_get_next(struct Channel *current_channel);
 

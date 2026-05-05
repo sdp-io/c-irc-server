@@ -1,4 +1,3 @@
-#include "channel.h"
 #include "hashmap.h"
 #include "messages.h"
 #include "network.h"
@@ -23,6 +22,16 @@ static int registered_user_count = 0;
 int get_unknown_user_count(void) { return unknown_user_count; }
 
 int get_registered_user_count(void) { return registered_user_count; }
+
+struct User *user_get_head(void) { return users_nick_map; }
+
+struct User *user_get_next(struct User *current_user) {
+  if (current_user == NULL) {
+    return NULL;
+  }
+
+  return current_user->hh_nick.next;
+}
 
 struct User *get_user_by_fd(int query_fd) {
   struct User *searched_user;
@@ -55,16 +64,10 @@ void set_user_buf_len(int user_fd, int new_len) {
   sender_user->buf_len = new_len;
 }
 
-/*
- * NOTE: Due to calling leave_channel upon each node, which then calls
- * user_remove_channel on that specified channel, this currently performs at
- * O(N^2) time. This is being left for now however, as I plan to refactor the
- * linked list implementation into a hashmap implementation for Channels and
- * Users.
- */
 void user_remove_all(struct User *target_user) {
   struct Channel *current_channel, *temp;
 
+  // Deletion safe macro
   HASH_ITER(hh_user, target_user->joined_channels, current_channel, temp) {
     HASH_DELETE(hh_user, target_user->joined_channels, current_channel);
     // TODO: Free memory allocated to empty channels in channel.c after hash
@@ -77,6 +80,25 @@ void user_remove_all(struct User *target_user) {
 void user_remove_channel(struct User *target_user,
                          struct Channel *target_channel) {
   HASH_DELETE(hh_user, target_user->joined_channels, target_channel);
+}
+
+bool users_share_channel(struct User *requester, struct User *candidate) {
+  struct Channel *requester_channels = requester->joined_channels;
+  while (requester_channels != NULL) {
+    struct Channel *shared_channel = NULL;
+    char *channel_name = requester_channels->channel_name;
+
+    HASH_FIND(hh_user, candidate->joined_channels, channel_name,
+              strlen(channel_name), shared_channel);
+
+    if (shared_channel != NULL) {
+      return true;
+    }
+
+    requester_channels = requester_channels->hh_user.next;
+  }
+
+  return false;
 }
 
 int add_to_users(int user_fd, char *user_host) {

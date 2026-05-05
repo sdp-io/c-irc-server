@@ -694,30 +694,34 @@ int handle_who_cmd(int sender_fd, char *mask_param) {
       char *real_name = current_user->real_name;
       bool is_chan_op = channel_users->channel_op;
       bool has_chan_voice = channel_users->channel_voice;
-      char channel_status[3];
+      char user_status[4];
       int hop_count = 0;
 
       if (current_user->is_away) {
-        channel_status[0] = 'G';
+        user_status[0] = 'G';
       } else {
-        channel_status[0] = 'H';
+        user_status[0] = 'H';
+      }
+
+      if (current_user->is_oper) {
+        user_status[1] = '*';
       }
 
       // As channel operator takes precedent, check and set it first
       if (is_chan_op) {
-        channel_status[1] = '@';
-        channel_status[2] = '\0';
+        user_status[2] = '@';
+        user_status[3] = '\0';
       } else if (has_chan_voice) {
-        channel_status[1] = '+';
-        channel_status[2] = '\0';
+        user_status[2] = '+';
+        user_status[3] = '\0';
       } else {
         // No channel permissions so terminate only after away status
-        channel_status[1] = '\0';
+        user_status[2] = '\0';
       }
 
       format_reply(reply_buf, BUF_SIZE, RPL_WHOREPLY, SERVER_NAME, sender_nick,
                    mask_param, user_name, host_name, SERVER_NAME, nickname,
-                   channel_status, hop_count, real_name);
+                   user_status, hop_count, real_name);
 
       send_string(sender_fd, reply_buf, strlen(reply_buf));
 
@@ -726,7 +730,40 @@ int handle_who_cmd(int sender_fd, char *mask_param) {
   } else if (mask_param == NULL || mask_param[0] == '0' ||
              mask_param[0] == '*') {
     // TODO: Implement WHO for non-server masks
-    return 0;
+    struct User *current_user = user_get_head();
+
+    while (current_user != NULL) {
+      if (!users_share_channel(sender_user, current_user)) {
+        char *user_name = current_user->user_name;
+        char *host_name = current_user->host_name;
+        char *nickname = current_user->nick;
+        char *real_name = current_user->real_name;
+        char *mask_param = "*"; // No channel mask has been set
+        char user_status[3];
+        int hop_count = 0;
+
+        if (current_user->is_away) {
+          user_status[0] = 'G';
+        } else {
+          user_status[0] = 'H';
+        }
+
+        if (current_user->is_oper) {
+          user_status[1] = '*';
+          user_status[2] = '\0';
+        } else {
+          user_status[1] = '\0';
+        }
+
+        format_reply(reply_buf, BUF_SIZE, RPL_WHOREPLY, SERVER_NAME,
+                     sender_nick, mask_param, user_name, host_name, SERVER_NAME,
+                     nickname, user_status, hop_count, real_name);
+
+        send_string(sender_fd, reply_buf, strlen(reply_buf));
+      }
+
+      current_user = user_get_next(current_user);
+    }
   }
 
   format_reply(reply_buf, BUF_SIZE, RPL_ENDOFWHOIS, SERVER_NAME, sender_nick);
