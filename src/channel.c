@@ -4,6 +4,7 @@
 #include "structs.h"
 #include "user.h"
 #include "utils.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -98,6 +99,8 @@ int channel_add_user(struct Channel *channel, struct User *new_user) {
 
   new_user_node->user_info = new_user;
   new_user_node->next = channel->user_list;
+  new_user_node->channel_op = false;
+  new_user_node->channel_voice = false;
 
   // Insert new user node to head of the user list
   channel->user_list = new_user_node;

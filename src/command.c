@@ -672,6 +672,69 @@ int handle_list_cmd(int sender_fd, char *channel_name) {
   return 0;
 }
 
+int handle_who_cmd(int sender_fd, char *mask_param) {
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
+  char reply_buf[BUF_SIZE];
+
+  // Handle cases where the who command is being used on a channel
+  if (mask_param != NULL && mask_param[0] == '#') {
+    struct Channel *target_channel = get_channel(mask_param);
+    struct UserNode *channel_users = NULL;
+    if (target_channel != NULL) {
+      channel_users = target_channel->user_list;
+    }
+
+    // Send RPL_WHOREPLY for all users within the specified channel
+    while (channel_users != NULL) {
+      struct User *current_user = channel_users->user_info;
+      char *user_name = current_user->user_name;
+      char *host_name = current_user->host_name;
+      char *nickname = current_user->nick;
+      char *real_name = current_user->real_name;
+      bool is_chan_op = channel_users->channel_op;
+      bool has_chan_voice = channel_users->channel_voice;
+      char channel_status[3];
+      int hop_count = 0;
+
+      if (current_user->is_away) {
+        channel_status[0] = 'G';
+      } else {
+        channel_status[0] = 'H';
+      }
+
+      // As channel operator takes precedent, check and set it first
+      if (is_chan_op) {
+        channel_status[1] = '@';
+        channel_status[2] = '\0';
+      } else if (has_chan_voice) {
+        channel_status[1] = '+';
+        channel_status[2] = '\0';
+      } else {
+        // No channel permissions so terminate only after away status
+        channel_status[1] = '\0';
+      }
+
+      format_reply(reply_buf, BUF_SIZE, RPL_WHOREPLY, SERVER_NAME, sender_nick,
+                   mask_param, user_name, host_name, SERVER_NAME, nickname,
+                   channel_status, hop_count, real_name);
+
+      send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+      channel_users = channel_users->next;
+    }
+  } else if (mask_param == NULL || mask_param[0] == '0' ||
+             mask_param[0] == '*') {
+    // TODO: Implement WHO for non-server masks
+    return 0;
+  }
+
+  format_reply(reply_buf, BUF_SIZE, RPL_ENDOFWHOIS, SERVER_NAME, sender_nick);
+
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
+  return 0;
+}
+
 void handle_user_msg(int sender_fd, char *buf) {
   // Split the buffer into individual lines to handle multiple commands
   // received in a single packet
@@ -776,6 +839,14 @@ void handle_user_msg(int sender_fd, char *buf) {
       }
 
       handle_list_cmd(sender_fd, channel_param);
+    } else if ((strcasecmp(user_cmd, "WHO")) == 0) {
+      char *mask_param = strtok_r(NULL, " ", &inner_saveptr);
+
+      if (mask_param != NULL && mask_param[0] == ':') {
+        mask_param++;
+      }
+
+      handle_who_cmd(sender_fd, mask_param);
     } else if ((strcasecmp(user_cmd, "PING")) == 0) {
       char *message_param = strtok_r(NULL, "", &inner_saveptr);
       handle_ping_cmd(sender_fd, message_param);

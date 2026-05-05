@@ -138,6 +138,18 @@
 #define RPL_WHOISSERVER ":%s 312 %s %s :%s\r\n"
 
 /*
+ * 315 RPL_ENDOFWHO
+ * Sent after all RPL_WHOREPLY replies have been sent. Used to mark the end of
+ * the WHO list.
+ *
+ * Format Args:
+ *  1. Sever Name
+ *  2. Recipient's Nickname
+ *  3. The mask used in the WHO query
+ */
+#define RPL_ENDOFWHO ":%s 315 %s %s :End of WHO list\r\n"
+
+/*
  * 318 RPL_ENDOFWHOIS
  * Marks the end of the WHOIS response sequence.
  *
@@ -146,7 +158,7 @@
  *  2. Target Nickname
  *  3. Query Nickname
  */
-#define RPL_ENDOFWHOIS ":%s 318 %s :End of /WHOIS list\r\n"
+#define RPL_ENDOFWHOIS ":%s 318 %s :End of WHOIS list\r\n"
 
 /*
  * 322 RPL_LIST
@@ -177,6 +189,25 @@
 
 // TODO: 332 RPL_TOPIC Add documentation
 #define RPL_TOPIC ":%s 332 %s :%s\r\n"
+
+/*
+ * 352 RPL_WHOREPLY
+ * Sent as a reply to the WHO command. Each matching user generates one reply.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Recipient Nickname
+ *  3. Channel Name
+ *  4. Target Username
+ *  5. Target Hostname
+ *  6. Target Server Name
+ *  7. Target Nickname
+ *  8. Target's Status ("H" for here, "G" for away, "@" for channel op, "+" for
+ *     channel voice mode)
+ *  9. Hop Count (Hardcoded as 0 as this is a single server)
+ *  10. Target's Realname
+ */
+#define RPL_WHOREPLY ":%s 352 %s %s %s %s %s %s %s :%d %s\r\n"
 
 /*
  * 372 RPL_MOTD

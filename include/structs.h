@@ -47,6 +47,8 @@ struct User {
 struct UserNode {
   struct User *user_info;
   struct UserNode *next;
+  bool channel_op;
+  bool channel_voice;
 };
 
 /*
@@ -66,7 +68,7 @@ struct ChannelNode {
  */
 struct Channel {
   int total_users;
-  char *channel_name;
+  char *channel_name; // Uses format "#channel"
   char *topic;
   struct UserNode *user_list;
   UT_hash_handle hh_global;
