@@ -772,6 +772,88 @@ int handle_who_cmd(int sender_fd, char *mask_param) {
   return 0;
 }
 
+int handle_names_cmd(int sender_fd, char *channel_param) {
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
+  char reply_buf[BUF_SIZE];
+
+  if (!sender_user->is_registered) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
+                 sender_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+    return -1;
+  }
+
+  if (channel_param) {
+    struct Channel *target_channel = get_channel(channel_param);
+    struct UserNode *channel_user = NULL;
+
+    if (target_channel != NULL) {
+      channel_user = target_channel->user_list;
+    }
+
+    int nick_list_len = MAX_NICK_LEN * 6; // 5 names with space for modes info
+    char nick_list[nick_list_len];
+    // TODO: Remove. Can just check strlen(formatted_nick) + strlen(nick_list)
+    // >= nick_list_len;
+
+    nick_list[0] = '\0'; // Prepare for strncat
+    while (channel_user != NULL) {
+      char *current_nick = channel_user->user_info->nick;
+      char formatted_nick[MAX_NICK_LEN + 3]; // Null-terminator and formatting
+
+      // Add mode prefix to formatted_nick before adding the nick
+      if (channel_user->channel_op) {
+        formatted_nick[0] = '@';
+        formatted_nick[1] = '\0';
+      } else if (channel_user->channel_voice) {
+        formatted_nick[0] = '+';
+        formatted_nick[1] = '\0';
+      } else {
+        formatted_nick[0] = '\0';
+      }
+
+      strcat(formatted_nick, current_nick);
+      strcat(formatted_nick, " "); // Space after first formatted nick in list
+      int total_len = strlen(formatted_nick) + strlen(nick_list);
+
+      // Send current nick list before concatenation to prevent overflow
+      if (total_len >= nick_list_len) {
+        format_reply(reply_buf, BUF_SIZE, RPL_NAMREPLY, SERVER_NAME,
+                     sender_nick, channel_param, nick_list);
+
+        send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+        nick_list[0] = '\0';
+      }
+
+      strcat(nick_list, formatted_nick);
+
+      channel_user = channel_user->next;
+    }
+
+    // Send any remaining contents of the nick list
+    if (nick_list[0] != '\0') {
+      format_reply(reply_buf, BUF_SIZE, RPL_NAMREPLY, SERVER_NAME, sender_nick,
+                   channel_param, nick_list);
+
+      send_string(sender_fd, reply_buf, strlen(reply_buf));
+    }
+  }
+
+  // Handle formatting for parameterless NAMES commands
+  channel_param = channel_param != NULL ? channel_param : "*";
+
+  format_reply(reply_buf, BUF_SIZE, RPL_ENDOFNAMES, SERVER_NAME, sender_nick,
+               channel_param);
+
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+  return 0;
+}
+
 void handle_user_msg(int sender_fd, char *buf) {
   // Split the buffer into individual lines to handle multiple commands
   // received in a single packet
@@ -884,6 +966,14 @@ void handle_user_msg(int sender_fd, char *buf) {
       }
 
       handle_who_cmd(sender_fd, mask_param);
+    } else if ((strcasecmp(user_cmd, "NAMES")) == 0) {
+      char *channel_param = strtok_r(NULL, " ", &inner_saveptr);
+
+      if (channel_param != NULL && channel_param[0] == ':') {
+        channel_param++;
+      }
+
+      handle_names_cmd(sender_fd, channel_param);
     } else if ((strcasecmp(user_cmd, "PING")) == 0) {
       char *message_param = strtok_r(NULL, "", &inner_saveptr);
       handle_ping_cmd(sender_fd, message_param);

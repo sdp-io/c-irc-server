@@ -210,6 +210,32 @@
 #define RPL_WHOREPLY ":%s 352 %s %s %s %s %s %s %s :%d %s\r\n"
 
 /*
+ * 353 RPL_NAMREPLY
+ * Sent as a reply to the NAMES command. Contains a space-separated list of
+ * nicknames currently within a channel. As the server does not currently
+ * support private or secret channels, '=' is hardcoded into the reply to
+ * signify the target channel is public.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname (the user requesting the list of names)
+ *  3. Channel Name
+ *  4. Space-separated list of nicknames (with '=' prefix currently hardcoded)
+ */
+#define RPL_NAMREPLY ":%s 353 %s = %s :%s\r\n"
+
+/*
+ * 366 RPL_ENDOFNAMES
+ * Sent to mark the end of the RPL_NAMREPLY sequence of replies.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ *  3. Channel Name
+ */
+#define RPL_ENDOFNAMES ":%s 366 %s %s :End of NAMES list\r\n"
+
+/*
  * 372 RPL_MOTD
  * Contains one line of the Message of the Day text.
  * Sent repeatedly for every line in the MOTD file.
