@@ -15,15 +15,22 @@ extern int join_channel(struct User *joining_user, char *channel_name,
                         struct Channel **output_channel);
 
 /*
- * Search for a channel based on a provided channel and retrieve its
- * list of users active within the channel. If channel is not found, or user is
+ * Handles logic for the PART command. If channel is not found, or user is
  * not active within the channel format and send ERR_NOSUCHCHANNEL or
  * ERR_NOTONCHANNEL. Otherwise, remove the user from the channel's user list and
  * notify the remaining users that the parting user has left the channel along
  * with an optional parting message provided by the parting user.
  */
-extern int leave_channel(struct User *parting_user,
-                         struct Channel *target_channel, char *parting_message);
+extern int handle_part_channel_logic(struct User *parting_user,
+                                     struct Channel *target_channel,
+                                     char *parting_message);
+
+/*
+ * Removes a user from a channel's user list and subsequently updates the user
+ * list.
+ */
+extern int channel_remove_user(struct Channel *channel_users,
+                               struct User *parting_user);
 
 /*
  * Iterates through the list of channels currently active on the server.

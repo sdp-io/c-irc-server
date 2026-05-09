@@ -35,6 +35,7 @@ struct User {
   bool is_registered;
   bool is_oper;
   bool is_away;
+  bool is_dead;           // Marks user to be removed from pfds and cleaned up
   UT_hash_handle hh;      // Make this struct hashable
   UT_hash_handle hh_nick; // Hashable handle for user nick
 };

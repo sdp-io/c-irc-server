@@ -150,6 +150,7 @@ void handle_new_connection(int listener, int *fd_count, int *fd_size,
 
 void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
   int sender_fd = pfds[*pfd_i].fd;
+  struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_buf = get_user_buf(sender_fd);
   int sender_buf_len = get_user_buf_len(sender_fd);
 
@@ -192,6 +193,16 @@ void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
         // No fragmented data, process sender_buf directly
         handle_user_msg(sender_fd, sender_buf);
 
+        // Start cleanup as user has QUIT the server
+        if (sender_user->is_dead) {
+          close(sender_fd);
+          del_from_users(sender_fd);
+          del_from_pfds(pfds, *pfd_i, fd_count);
+
+          (*pfd_i)--;
+          return;
+        }
+
         memset(sender_buf, 0, BUF_SIZE);
         set_user_buf_len(sender_fd, 0);
       } else {
@@ -203,6 +214,16 @@ void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
         temp_array[bytes_processed] = '\0';
 
         handle_user_msg(sender_fd, temp_array);
+
+        // Start cleanup as user has QUIT the server
+        if (sender_user->is_dead) {
+          close(sender_fd);
+          del_from_users(sender_fd);
+          del_from_pfds(pfds, *pfd_i, fd_count);
+
+          (*pfd_i)--;
+          return;
+        }
 
         int remaining_bytes = total_len - bytes_processed;
 

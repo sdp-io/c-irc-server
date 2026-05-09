@@ -451,7 +451,8 @@ int handle_part_cmd(int sender_fd, char *channel_name, char *parting_message) {
   }
 
   struct Channel *target_channel = get_channel(channel_name);
-  int part_status = leave_channel(sender_user, target_channel, parting_message);
+  int part_status =
+      handle_part_channel_logic(sender_user, target_channel, parting_message);
   if (part_status == -1) {
     printf("handle_part_cmd: error parting from channel %s\n", channel_name);
     return -1;
@@ -854,6 +855,36 @@ int handle_names_cmd(int sender_fd, char *channel_param) {
   return 0;
 }
 
+int handle_quit_cmd(int sender_fd, char *quit_message) {
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char *sender_nick = sender_user->nick;
+  char *sender_username = sender_user->user_name;
+  char *sender_hostname = sender_user->host_name;
+  char reply_buf[BUF_SIZE];
+
+  // Set default quit message to sender nick (RFC 1459 4.1.6)
+  if (!quit_message) {
+    quit_message = sender_user->nick;
+  }
+
+  struct User *current_user = user_get_head();
+  while (current_user != NULL) {
+    bool users_share_chan = users_share_channel(sender_user, current_user);
+    if (current_user != sender_user && users_share_chan) {
+      // FMT and send QUIT message
+      format_reply(reply_buf, BUF_SIZE, FMT_QUIT, sender_nick, sender_username,
+                   sender_hostname, quit_message);
+
+      send_string(current_user->user_fd, reply_buf, strlen(reply_buf));
+    }
+
+    current_user = user_get_next(current_user);
+  }
+
+  sender_user->is_dead = true;
+  return 0;
+}
+
 void handle_user_msg(int sender_fd, char *buf) {
   // Split the buffer into individual lines to handle multiple commands
   // received in a single packet
@@ -979,6 +1010,14 @@ void handle_user_msg(int sender_fd, char *buf) {
       handle_ping_cmd(sender_fd, message_param);
     } else if ((strcasecmp(user_cmd, "PONG")) == 0) {
       // Handle 'PONG' messages silently
+    } else if ((strcasecmp(user_cmd, "QUIT")) == 0) {
+      char *quit_message = strtok_r(NULL, "", &inner_saveptr);
+
+      if (quit_message != NULL && quit_message[0] == ':') {
+        quit_message++;
+      }
+
+      handle_quit_cmd(sender_fd, quit_message);
     } else {
       // Unknown command, send ERR_UNKNOWNCOMMAND
       handle_unknown_cmd(sender_fd, user_cmd);

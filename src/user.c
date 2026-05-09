@@ -1,3 +1,4 @@
+#include "channel.h"
 #include "hashmap.h"
 #include "messages.h"
 #include "network.h"
@@ -9,7 +10,7 @@
 #include <string.h>
 #include <strings.h>
 
-// Linked list of users for the IRC server
+// Hash table of users for the IRC server
 static struct User *users_fd_map = NULL;
 static struct User *users_nick_map = NULL;
 
@@ -70,8 +71,9 @@ void user_remove_all(struct User *target_user) {
   // Deletion safe macro
   HASH_ITER(hh_user, target_user->joined_channels, current_channel, temp) {
     HASH_DELETE(hh_user, target_user->joined_channels, current_channel);
-    // TODO: Free memory allocated to empty channels in channel.c after hash
-    // table refactor
+
+    // Remove user from channel's active user list
+    channel_remove_user(current_channel, target_user);
   }
 }
 
@@ -131,6 +133,7 @@ int add_to_users(int user_fd, char *user_host) {
   new_user->is_registered = false;
   new_user->is_oper = false;
   new_user->is_away = false;
+  new_user->is_dead = false;
   memset(new_user->user_buf, 0, BUF_SIZE);
 
   // Add the new user struct to user_fd hash table

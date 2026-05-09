@@ -27,6 +27,14 @@ char *channel_get_topic(struct Channel *target_channel) {
   return target_channel->topic != NULL ? target_channel->topic : "";
 }
 
+int delete_channel(struct Channel *target_channel) {
+  HASH_DELETE(hh_global, channels_map, target_channel);
+  free(target_channel->channel_name);
+  free(target_channel);
+
+  return 0;
+}
+
 // When a channel is JOIN'd that does not exist, this function is called to
 // create it.
 struct Channel *create_channel(char *channel_name) {
@@ -129,15 +137,15 @@ void channel_message_users(struct UserNode *user_list, char *message,
   }
 }
 
-int channel_remove_user(struct UserNode **channel_users,
+int channel_remove_user(struct Channel *target_channel,
                         struct User *parting_user) {
   // Handle cases where the users list is NULL or empty
-  if (channel_users == NULL || *channel_users == NULL) {
+  if (target_channel == NULL || target_channel->user_list == NULL) {
     return -1;
   }
 
   // Create iterator variables to traverse the channel's users linked list
-  struct UserNode *user_node_iterator = *channel_users;
+  struct UserNode *user_node_iterator = target_channel->user_list;
   struct User *iterator_user = user_node_iterator->user_info;
   struct UserNode *prev_user_node = NULL;
 
@@ -146,9 +154,10 @@ int channel_remove_user(struct UserNode **channel_users,
 
   // Handle removal of user at head of the linked list
   if (parting_user_fd == iterator_user_fd) {
-    *channel_users = user_node_iterator->next;
+    target_channel->user_list = user_node_iterator->next;
     free(user_node_iterator);
-    return 0;
+    target_channel->total_users -= 1;
+    user_node_iterator = NULL;
   }
 
   while (user_node_iterator != NULL) {
@@ -159,15 +168,20 @@ int channel_remove_user(struct UserNode **channel_users,
     if (parting_user_fd == iterator_user_fd) {
       prev_user_node->next = user_node_iterator->next;
       free(user_node_iterator);
-      return 0;
+      target_channel->total_users -= 1;
+      break;
     }
 
     prev_user_node = user_node_iterator;
     user_node_iterator = user_node_iterator->next;
   }
 
-  // Parting user's file descriptor not found in channel's list of active users
-  return -2;
+  // Delete empty channel
+  if (target_channel->user_list == NULL) {
+    delete_channel(target_channel);
+  }
+
+  return 0;
 }
 
 // JOIN a channel. Add user to list of joined users.
@@ -207,16 +221,9 @@ int join_channel(struct User *joining_user, char *channel_name,
   return 0;
 }
 
-int delete_channel(struct Channel *target_channel) {
-  HASH_DELETE(hh_global, channels_map, target_channel);
-  free(target_channel->channel_name);
-  free(target_channel);
-
-  return 0;
-}
-
-int leave_channel(struct User *parting_user, struct Channel *target_channel,
-                  char *parting_message) {
+int handle_part_channel_logic(struct User *parting_user,
+                              struct Channel *target_channel,
+                              char *parting_message) {
   char *channel_name = target_channel->channel_name;
   char numeric_reply_buf[BUF_SIZE];
 
@@ -232,8 +239,8 @@ int leave_channel(struct User *parting_user, struct Channel *target_channel,
     return -1;
   }
 
-  struct UserNode **channel_users = &(target_channel->user_list);
-  if (!channel_has_user(*channel_users, parting_user)) {
+  struct UserNode *channel_users = target_channel->user_list;
+  if (!channel_has_user(channel_users, parting_user)) {
     char *parting_user_nick = parting_user->nick;
     int parting_user_fd = parting_user->user_fd;
 
@@ -259,10 +266,10 @@ int leave_channel(struct User *parting_user, struct Channel *target_channel,
                parting_message);
 
   // Send message to every user within the channel user list (including sender)
-  channel_message_users(*channel_users, parting_msg_buf, -1);
+  channel_message_users(channel_users, parting_msg_buf, -1);
 
   // Then attempt to remove sender from the channel user list
-  int part_status = channel_remove_user(channel_users, parting_user);
+  int part_status = channel_remove_user(target_channel, parting_user);
   if (part_status == -1) {
     char *parting_user_nick = parting_user->nick;
     fprintf(stderr,
@@ -279,10 +286,9 @@ int leave_channel(struct User *parting_user, struct Channel *target_channel,
 
   // Remove channel from the user's list of actively joined channels
   user_remove_channel(parting_user, target_channel);
-  target_channel->total_users -= 1;
 
   // Delete the channel if it now has zero active users
-  if (*channel_users == NULL) {
+  if (channel_users == NULL) {
     int delete_status = delete_channel(target_channel);
     if (delete_status == -1) {
       fprintf(stderr,

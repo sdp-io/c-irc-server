@@ -492,4 +492,17 @@
  */
 #define FMT_PING ":%s PONG %s %s\r\n"
 
+/*
+ * FMT_QUIT
+ * Used to relay the quitting of a client from the server. Sends a custom quit
+ * message, or by default, the quitting client's nickname.
+ *
+ * Format Args:
+ *   1. Quitter Nickname
+ *   2. Quitter Username
+ *   3. Quitter Hostname
+ *   4. Quitting Message (Quitter's Nick by Default)
+ */
+#define FMT_QUIT ":%s!%s@%s QUIT :%s\r\n"
+
 #endif
