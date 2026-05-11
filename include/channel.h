@@ -44,12 +44,19 @@ extern int delete_channel(struct Channel *target_channel);
 // TODO: Add documentation
 extern struct Channel *get_channel(char *channel_name);
 
+/*
+ * Retrieves the container node for a specified user or NULL if they are not in
+the channel. Used for checking the query user's channel modes.
+*/
+extern struct UserNode *channel_get_member(struct Channel *target_channel,
+                                           struct User *query_user);
+
 // TODO: Add documentation
-extern void channel_message_users(struct UserNode *user_list, char *message,
+extern void channel_message_users(struct Channel *target_channel, char *message,
                                   int exclude_fd);
 
 // TODO: Add documentation
-extern bool channel_has_user(struct UserNode *user_list,
+extern bool channel_has_user(struct Channel *target_channel,
                              struct User *query_user);
 
 // TODO: Add documentation

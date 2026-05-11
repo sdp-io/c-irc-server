@@ -196,6 +196,20 @@
  */
 #define RPL_LISTEND ":%s 323 %s :End of LIST\r\n"
 
+/*
+ * 324 RPL_CHANNELMODEIS
+ * Sent to a user to inform them of the current modes for a channel.
+ * Mode parameters are not included in this implementation as they are
+ * currently not supported by the server.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname (the user requesting the info)
+ *  3. Channel Name
+ *  4. The Mode String (e.g., "+nt", "+", etc.)
+ */
+#define RPL_CHANNELMODEIS ":%s 324 %s %s %s\r\n"
+
 // TODO: 331 RPL_NOTOPIC Add documentation
 #define RPL_NOTOPIC ":%s 331 %s :No topic is set\r\n"
 
@@ -438,6 +452,18 @@
  *  2. Target Nickname
  */
 #define ERR_PASSWDMISMATCH ":%s 464 %s :Password incorrect\r\n"
+
+/*
+ * 482 ERR_CHANOPRIVSNEEDED
+ * Sent when a user attempts to perform an action that requires channel operator
+ * privileges (like MODE +o or TOPIC) but they do not have the required status.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname (the user receiving the error)
+ *  3. Channel Name
+ */
+#define ERR_CHANOPRIVSNEEDED ":%s 482 %s %s :You're not channel operator\r\n"
 
 /*
  * 502 ERR_USERSDONTMATCH

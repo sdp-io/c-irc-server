@@ -71,6 +71,8 @@ struct Channel {
   int total_users;
   char *channel_name; // Uses format "#channel"
   char *topic;
+  bool moderated_mode; // When true, only users with voice mode may send msgs
+  bool topic_mode;     // When true, only a channel operator can set the topic
   struct UserNode *user_list;
   UT_hash_handle hh_global; // Hash handle for all channels on the server
   UT_hash_handle hh_user;   // Hash handle for channels in a user's channel list
