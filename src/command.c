@@ -886,6 +886,113 @@ int handle_quit_cmd(int sender_fd, char *quit_message) {
   return 0;
 }
 
+/*
+ * Helper function for handle_mode_cmd. Handles the setting of a Channel mode,
+ * or a Channel User mode.
+ */
+int handle_channel_mode(struct User *sender_user, char *channel_param,
+                        char *mode_param, char *member_param) {
+  // TODO: Implement channel mode logic
+
+  return 0;
+}
+
+/*
+ * Helper function for handle_mode_cmd. Handles the setting of a User mode only.
+ */
+int handle_user_mode(struct User *sender_user, char *user_param,
+                     char *mode_param) {
+  char reply_buf[BUF_SIZE];
+
+  if (strcasecmp(sender_user->nick, user_param) != 0) {
+    format_reply(reply_buf, BUF_SIZE, ERR_USERSDONTMATCH, SERVER_NAME,
+                 sender_user->nick);
+
+    send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  // Reply with user's current modes
+  if (mode_param == NULL) {
+    char mode_str[32]; // Arbitrary length to hold supported modes
+    mode_str[0] = '+';
+    mode_str[1] = '\0';
+
+    if (sender_user->is_oper) {
+      strcat(mode_str, "o");
+    }
+
+    if (sender_user->is_away) {
+      strcat(mode_str, "a");
+    }
+
+    format_reply(reply_buf, BUF_SIZE, RPL_UMODEIS, SERVER_NAME,
+                 sender_user->nick, mode_str);
+
+    send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+    return 0;
+  }
+
+  // Cannot set OPER mode via MODE cmd (RFC 2812, 3.1.5), Return silently
+  if (strcmp(mode_param, "+o") == 0) {
+    return 0;
+  }
+
+  if (strcmp(mode_param, "-o") == 0) {
+    sender_user->is_oper = false;
+
+    format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
+                 sender_user->user_name, sender_user->host_name, user_param,
+                 mode_param, "");
+
+    send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+    return 0;
+  }
+
+  // Cannot set AWAY mode via MODE cmd (RFC 2812, 3.1.5), Return silently
+  if (strcmp(mode_param, "+a") == 0 || strcmp(mode_param, "-a") == 0) {
+    return 0;
+  }
+
+  return 0;
+}
+
+// NOTE: Currently only supports one MODE parameter
+int handle_mode_cmd(int sender_fd, char *target_param, char *mode_param,
+                    char *member_param) {
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
+  char reply_buf[BUF_SIZE];
+
+  if (!sender_user->is_registered) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
+                 sender_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+    return -1;
+  }
+
+  if (target_param == NULL) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NEEDMOREPARAMS, SERVER_NAME,
+                 sender_nick, "MODE");
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+    return -1;
+  }
+
+  if (target_param[0] == '#') {
+    handle_channel_mode(sender_user, target_param, mode_param, member_param);
+  }
+
+  if (target_param[0] != '#') {
+    handle_user_mode(sender_user, target_param, mode_param);
+  }
+
+  return 0;
+}
+
 void handle_user_msg(int sender_fd, char *buf) {
   // Split the buffer into individual lines to handle multiple commands
   // received in a single packet
@@ -981,8 +1088,6 @@ void handle_user_msg(int sender_fd, char *buf) {
       }
 
       handle_away_cmd(sender_fd, away_msg);
-    } else if ((strcasecmp(user_cmd, "MODE")) == 0) {
-      // TODO: Implement MODE
     } else if ((strcasecmp(user_cmd, "LIST")) == 0) {
       char *channel_param = strtok_r(NULL, " ", &inner_saveptr);
 
@@ -1007,6 +1112,12 @@ void handle_user_msg(int sender_fd, char *buf) {
       }
 
       handle_names_cmd(sender_fd, channel_param);
+    } else if ((strcasecmp(user_cmd, "MODE")) == 0) {
+      char *target_param = strtok_r(NULL, " ", &inner_saveptr);
+      char *mode_param = strtok_r(NULL, " ", &inner_saveptr);
+      char *member_param = strtok_r(NULL, " ", &inner_saveptr);
+
+      handle_mode_cmd(sender_fd, target_param, mode_param, member_param);
     } else if ((strcasecmp(user_cmd, "PING")) == 0) {
       char *message_param = strtok_r(NULL, "", &inner_saveptr);
       handle_ping_cmd(sender_fd, message_param);

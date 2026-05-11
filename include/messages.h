@@ -17,6 +17,18 @@
   ":%s 001 %s :Welcome to the Internet Relay Network %s!%s@%s\r\n"
 
 /*
+ * 221 RPL_UMODEIS
+ * Sent as a reply to a user querying their own global modes (e.g., "MODE
+ * mynick").
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname (the user requesting the info)
+ *  3. The Mode String (e.g., "+o", "+a", or just "+" if user has no modes)
+ */
+#define RPL_UMODEIS ":%s 221 %s :%s\r\n"
+
+/*
  * 251 RPL_LUSERCLIENT
  * Sent as part of the LUSERS response, detailing the global number of
  * users, services, and servers on the network.
@@ -428,6 +440,17 @@
 #define ERR_PASSWDMISMATCH ":%s 464 %s :Password incorrect\r\n"
 
 /*
+ * 502 ERR_USERSDONTMATCH
+ * Sent by the server to a user who is trying to view or change the
+ * user mode for a user other than themself.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname (the user trying the command)
+ */
+#define ERR_USERSDONTMATCH ":%s 502 %s :Cannot change mode for other users\r\n"
+
+/*
  * FMT_PRIVMSG
  * Used to relay a private message from a sender to a target recipient.
  *
@@ -480,6 +503,24 @@
  *  5. (Optional) Contents of the parting message
  */
 #define FMT_PART ":%s!%s@%s PART %s :%s\r\n"
+
+/*
+ * FMT_MODE
+ * Used to broadcast a successful mode change to clients.
+ * For channel modes, this is sent to everyone in the channel.
+ * For user modes, this is echoed back to the calling user who changed their
+ * mode.
+ *
+ * Format Args:
+ *  1. Sender Nickname
+ *  2. Sender Username
+ *  3. Sender Hostname
+ *  4. Target (Channel name or User nickname)
+ *  5. Mode Flag String (e.g., "+o", "-o")
+ *  6. Member Parameter (e.g., the target nickname for channel mode changes.
+ *     Pass an empty string "" if the mode doesn't take a parameter).
+ */
+#define FMT_MODE ":%s!%s@%s MODE %s %s %s\r\n"
 
 /*
  * FMT_PING
