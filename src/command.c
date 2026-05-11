@@ -555,7 +555,8 @@ int handle_oper_cmd(int sender_fd, char *pass_param) {
   }
 
   if (pass_param == NULL) {
-    format_reply(reply_buf, BUF_SIZE, ERR_NEEDMOREPARAMS, SERVER_NAME, "JOIN");
+    format_reply(reply_buf, BUF_SIZE, ERR_NEEDMOREPARAMS, SERVER_NAME,
+                 sender_nick, "OPER");
 
     send_string(sender_fd, reply_buf, strlen(reply_buf));
     return -1;
@@ -966,8 +967,9 @@ void handle_user_msg(int sender_fd, char *buf) {
     } else if ((strcasecmp(user_cmd, "LUSERS")) == 0) {
       handle_lusers_cmd(sender_fd);
     } else if ((strcasecmp(user_cmd, "OPER")) == 0) {
-      // TODO: Implement OPER
-      char *nick_param = strtok_r(NULL, " ", &inner_saveptr);
+      // Ignore required nick param is it is unused for our OPER implementation
+      strtok_r(NULL, " ", &inner_saveptr);
+
       char *pass_param = strtok_r(NULL, " ", &inner_saveptr);
 
       handle_oper_cmd(sender_fd, pass_param);
