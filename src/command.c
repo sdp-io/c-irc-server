@@ -503,6 +503,19 @@ int handle_topic_cmd(int sender_fd, char *channel_name, char *topic_message) {
     return -1;
   }
 
+  struct UserNode *sender_member =
+      channel_get_member(target_channel, sender_user);
+
+  // Insufficient permissions to modify topic mode channel's topic
+  if (target_channel->topic_mode && !sender_member->channel_op &&
+      !sender_user->is_oper) {
+    format_reply(reply_buf, BUF_SIZE, ERR_CHANOPRIVSNEEDED, SERVER_NAME,
+                 sender_nick, channel_name);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
   // Empty channel topic string provided, remove channel's current topic
   if (topic_message != NULL && topic_message[0] == '\0') {
     channel_remove_topic(target_channel);
