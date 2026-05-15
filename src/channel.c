@@ -37,6 +37,10 @@ int delete_channel(struct Channel *target_channel) {
 
 struct UserNode *channel_get_member(struct Channel *target_channel,
                                     struct User *query_user) {
+  if (target_channel == NULL) {
+    return NULL;
+  }
+
   struct UserNode *user_list = target_channel->user_list;
   int query_user_fd = query_user->user_fd;
 

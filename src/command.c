@@ -10,15 +10,101 @@
 #include <string.h>
 #include <strings.h>
 
+static void handle_privmsg_channel(struct User *sender_user,
+                                   char *recipient_channel, char *message,
+                                   bool is_notice) {
+  char reply_buf[BUF_SIZE];
+  struct Channel *target_channel = get_channel(recipient_channel);
+
+  // Send ERR_NOSUCHNICK numeric if command called is not a NOTICE
+  if (target_channel == NULL) {
+    if (!is_notice) {
+      format_reply(reply_buf, BUF_SIZE, ERR_NOSUCHNICK, SERVER_NAME,
+                   sender_user->nick, recipient_channel);
+
+      send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+    }
+    return;
+  }
+
+  struct UserNode *sender_member =
+      channel_get_member(target_channel, sender_user);
+
+  bool sender_has_voice = sender_user->is_oper || sender_member->channel_op ||
+                          sender_member->channel_voice;
+
+  // User does not have voice permission in moderated channel,
+  // send numeric if command called is not a NOTICE
+  if (target_channel->moderated_mode && !sender_has_voice) {
+    if (!is_notice) {
+      format_reply(reply_buf, BUF_SIZE, ERR_CHANOPRIVSNEEDED, SERVER_NAME,
+                   sender_user->nick, recipient_channel);
+
+      send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+    }
+    return;
+  }
+
+  // Otherwise prepare to send the message to the target
+  char *sender_username = sender_user->user_name;
+  char *sender_hostname = sender_user->host_name;
+  char *fmt_string = is_notice ? FMT_NOTICE : FMT_PRIVMSG;
+
+  // Format reply to match the command called by the sending user
+  format_reply(reply_buf, BUF_SIZE, fmt_string, sender_user->nick,
+               sender_username, sender_hostname, recipient_channel, message);
+
+  channel_message_users(target_channel, reply_buf, sender_user->user_fd);
+}
+
+static void handle_privmsg_user(struct User *sender_user, char *target_nick,
+                                char *message, bool is_notice) {
+  char reply_buf[BUF_SIZE];
+  struct User *target_user = get_user_by_nick(target_nick);
+
+  // Send ERR_NOSUCHNICK numeric if command called is not a NOTICE
+  if (target_user == NULL) {
+    if (!is_notice) {
+      format_reply(reply_buf, BUF_SIZE, ERR_NOSUCHNICK, SERVER_NAME,
+                   sender_user->nick, target_nick);
+
+      send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+    }
+
+    return;
+  }
+
+  // Reply with 301 RPL_AWAY numeric if user is away and cmd is not a NOTICE
+  if (target_user != NULL && target_user->is_away) {
+    if (!is_notice) {
+      format_reply(reply_buf, BUF_SIZE, RPL_AWAY, SERVER_NAME,
+                   sender_user->nick, target_user->nick, target_user->away_msg);
+
+      send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+    }
+
+    return;
+  }
+
+  // Otherwise prepare to send the message to the target
+  char *sender_username = sender_user->user_name;
+  char *sender_hostname = sender_user->host_name;
+  char *fmt_string = is_notice ? FMT_NOTICE : FMT_PRIVMSG;
+
+  // Format reply to match the command called by the sending user
+  format_reply(reply_buf, BUF_SIZE, fmt_string, sender_user->nick,
+               sender_username, sender_hostname, target_nick, message);
+
+  send_string(target_user->user_fd, reply_buf, strlen(reply_buf));
+}
+
+// TODO: Move all reply_status checks to send_string helper function
 int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
                    bool is_notice) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nickname = (sender_user->nick != NULL) ? sender_user->nick : "*";
   char reply_buf[BUF_SIZE];
   int reply_status;
-
-  struct User *target_user = NULL;
-  struct Channel *target_channel = NULL;
 
   // Send ERR_NORECIPIENT numeric is command called is not a NOTICE
   if (recipient_nick == NULL) {
@@ -70,62 +156,9 @@ int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
 
   // Message target is a channel
   if (recipient_nick[0] == '#') {
-    target_channel = get_channel(recipient_nick);
+    handle_privmsg_channel(sender_user, recipient_nick, message, is_notice);
   } else { // Message target is a user
-    printf("PRIVMSG: calling target_user\n");
-    target_user = get_user_by_nick(recipient_nick);
-  }
-
-  // Send ERR_NOSUCHNICK numeric if command called is not a NOTICE
-  if (target_channel == NULL && target_user == NULL) {
-    if (is_notice) {
-      // Return silently if called command is a NOTICE
-      return -1;
-    }
-
-    format_reply(reply_buf, BUF_SIZE, ERR_NOSUCHNICK, SERVER_NAME,
-                 sender_nickname, recipient_nick);
-
-    reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-    if (reply_status == -1) {
-      fprintf(stderr, "handle_msg_cmd: error sending ERR_NOSUCHNICK to %d\n",
-              sender_fd);
-    }
-
-    return -1;
-  }
-
-  // If user is away, reply with 301 RPL_AWAY numeric
-  if (target_user != NULL && target_user->is_away) {
-    if (is_notice) {
-      // Return silently if called command is a NOTICE
-      return 0;
-    }
-
-    format_reply(reply_buf, BUF_SIZE, RPL_AWAY, SERVER_NAME, sender_nickname,
-                 target_user->nick, target_user->away_msg);
-    reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-    if (reply_status == -1) {
-      fprintf(stderr, "handle_msg_cmd: error sending RPL_AWAY to %d\n",
-              sender_fd);
-    }
-
-    return 0;
-  }
-
-  // Otherwise prepare to send the message to the target
-  char *sender_username = sender_user->user_name;
-  char *sender_hostname = sender_user->host_name;
-  char *fmt_string = is_notice ? FMT_NOTICE : FMT_PRIVMSG;
-
-  // Format reply to match the command called by the sending user
-  format_reply(reply_buf, BUF_SIZE, fmt_string, sender_nickname,
-               sender_username, sender_hostname, recipient_nick, message);
-
-  if (target_channel != NULL) {
-    channel_message_users(target_channel, reply_buf, sender_fd);
-  } else { // Target is a user so send directly
-    send_string(target_user->user_fd, reply_buf, strlen(reply_buf));
+    handle_privmsg_user(sender_user, recipient_nick, message, is_notice);
   }
 
   return 0;
