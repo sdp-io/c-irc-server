@@ -395,6 +395,19 @@
 #define ERR_NICKNAMEINUSE ":%s 433 %s %s :Nickname is already in use\r\n"
 
 /*
+ * 441 ERR_USERNOTINCHANNEL
+ * Returned by the server to indicate that the target user of the
+ * command is not in the given channel.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Sender Nickname (the user trying the command)
+ *  3. Target Nickname (the user who is missing from the channel)
+ *  4. Channel Name
+ */
+#define ERR_USERNOTINCHANNEL ":%s 441 %s %s %s :They aren't on that channel\r\n"
+
+/*
  * 442 ERR_NOTONCHANNEL
  * Returned when a client tries to perform a channel-based command
  * on a channel they are not currently a member of.
@@ -454,6 +467,19 @@
 #define ERR_PASSWDMISMATCH ":%s 464 %s :Password incorrect\r\n"
 
 /*
+ * 472 ERR_UNKNOWNMODE
+ * Sent by the server to indicate that a MODE message was sent with
+ * a channel parameter and that the mode flag sent was not recognized.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Sender Nickname
+ *  3. The unknown mode character
+ *  4. Channel Name
+ */
+#define ERR_UNKNOWNMODE ":%s 472 %s %c :is unknown mode char to me for %s\r\n"
+
+/*
  * 482 ERR_CHANOPRIVSNEEDED
  * Sent when a user attempts to perform an action that requires channel operator
  * privileges (like MODE +o or TOPIC) but they do not have the required status.
@@ -464,6 +490,17 @@
  *  3. Channel Name
  */
 #define ERR_CHANOPRIVSNEEDED ":%s 482 %s %s :You're not channel operator\r\n"
+
+/*
+ * 501 ERR_UMODEUNKNOWNFLAG
+ * Sent by the server to indicate that a MODE message was sent with
+ * a nickname parameter and that the mode flag sent was not recognized.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname (the user requesting the mode change)
+ */
+#define ERR_UMODEUNKNOWNFLAG ":%s 501 %s :Unknown MODE flag\r\n"
 
 /*
  * 502 ERR_USERSDONTMATCH

@@ -923,11 +923,16 @@ int handle_channel_mode(struct User *sender_user, char *channel_param,
     return 0;
   }
 
+  // Fail silently for single characters or "+"/"-" prefixes
+  if (strlen(mode_param) < 2) {
+    return -1;
+  }
+
   // Retrieve sender's member info from the target channel parameter
   struct UserNode *sender_member =
       channel_get_member(target_channel, sender_user);
 
-  if (!sender_member->channel_op) {
+  if (!sender_member->channel_op && !sender_user->is_oper) {
     format_reply(reply_buf, BUF_SIZE, ERR_CHANOPRIVSNEEDED, SERVER_NAME,
                  sender_user->nick, channel_param);
 
@@ -936,13 +941,15 @@ int handle_channel_mode(struct User *sender_user, char *channel_param,
   }
 
   if (strcmp(mode_param, "+m") == 0) {
-    target_channel->moderated_mode = true;
+    if (!target_channel->moderated_mode) {
+      target_channel->moderated_mode = true;
 
-    format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
-                 sender_user->user_name, sender_user->host_name, channel_param,
-                 mode_param, "");
+      format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
+                   sender_user->user_name, sender_user->host_name,
+                   channel_param, mode_param, "");
 
-    channel_message_users(target_channel, reply_buf, -1);
+      channel_message_users(target_channel, reply_buf, -1);
+    }
     return 0;
   } else if (strcmp(mode_param, "-m") == 0) {
     target_channel->moderated_mode = false;
@@ -956,24 +963,98 @@ int handle_channel_mode(struct User *sender_user, char *channel_param,
   }
 
   if (strcmp(mode_param, "+t") == 0) {
-    target_channel->topic_mode = true;
+    if (!target_channel->topic_mode) {
+      target_channel->topic_mode = true;
 
-    format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
-                 sender_user->user_name, sender_user->host_name, channel_param,
-                 mode_param, "");
+      format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
+                   sender_user->user_name, sender_user->host_name,
+                   channel_param, mode_param, "");
 
-    channel_message_users(target_channel, reply_buf, -1);
+      channel_message_users(target_channel, reply_buf, -1);
+    }
     return 0;
   } else if (strcmp(mode_param, "-t") == 0) {
-    target_channel->topic_mode = false;
+    if (target_channel->topic_mode) {
+      target_channel->topic_mode = false;
 
-    format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
-                 sender_user->user_name, sender_user->host_name, channel_param,
-                 mode_param, "");
+      format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
+                   sender_user->user_name, sender_user->host_name,
+                   channel_param, mode_param, "");
 
-    channel_message_users(target_channel, reply_buf, -1);
+      channel_message_users(target_channel, reply_buf, -1);
+    }
     return 0;
   }
+
+  // Handle MODE commands on a channel member
+  struct User *channel_member = get_user_by_nick(member_param);
+  if (channel_member == NULL ||
+      !channel_has_user(target_channel, channel_member)) {
+    format_reply(reply_buf, BUF_SIZE, ERR_USERNOTINCHANNEL, SERVER_NAME,
+                 sender_user->nick, member_param, channel_param);
+
+    send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  struct UserNode *channel_member_info =
+      channel_get_member(target_channel, channel_member);
+
+  if (strcmp(mode_param, "+o") == 0) {
+    if (!channel_member_info->channel_op) {
+      channel_member_info->channel_op = true;
+
+      format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
+                   sender_user->user_name, sender_user->host_name,
+                   channel_param, mode_param, channel_member->nick);
+
+      channel_message_users(target_channel, reply_buf, -1);
+    }
+    return 0;
+  } else if (strcmp(mode_param, "-o") == 0) {
+    if (channel_member_info->channel_op) {
+      channel_member_info->channel_op = false;
+
+      format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
+                   sender_user->user_name, sender_user->host_name,
+                   channel_param, mode_param, channel_member->nick);
+
+      channel_message_users(target_channel, reply_buf, -1);
+    }
+    return 0;
+  }
+
+  if (strcmp(mode_param, "+v") == 0) {
+    if (!channel_member_info->channel_voice) {
+      channel_member_info->channel_voice = true;
+
+      format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
+                   sender_user->user_name, sender_user->host_name,
+                   channel_param, mode_param, channel_member->nick);
+
+      channel_message_users(target_channel, reply_buf, -1);
+    }
+    return 0;
+  } else if (strcmp(mode_param, "-v") == 0) {
+    if (channel_member_info->channel_voice) {
+      channel_member_info->channel_voice = false;
+
+      format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
+                   sender_user->user_name, sender_user->host_name,
+                   channel_param, mode_param, channel_member->nick);
+
+      channel_message_users(target_channel, reply_buf, -1);
+    }
+    return 0;
+  }
+
+  // If this point is reached, mode parameter does not match any currently
+  // supported modes
+  char unknown_mode = mode_param[1];
+  format_reply(reply_buf, BUF_SIZE, ERR_UNKNOWNMODE, SERVER_NAME,
+               sender_user->nick, unknown_mode, channel_param);
+
+  send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
 
   return 0;
 }
@@ -1020,13 +1101,15 @@ int handle_user_mode(struct User *sender_user, char *user_param,
   }
 
   if (strcmp(mode_param, "-o") == 0) {
-    sender_user->is_oper = false;
+    if (sender_user->is_oper) {
+      sender_user->is_oper = false;
 
-    format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
-                 sender_user->user_name, sender_user->host_name, user_param,
-                 mode_param, "");
+      format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
+                   sender_user->user_name, sender_user->host_name, user_param,
+                   mode_param, "");
 
-    send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+      send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+    }
     return 0;
   }
 
