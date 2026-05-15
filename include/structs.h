@@ -8,7 +8,7 @@
 
 #define MOTD_LINE_SIZE 100
 
-#define MAX_NICK_LEN 30
+#define MAX_NICK_LEN 30 // Does not account for null-terminator
 
 #define SERVER_NAME "localhost"
 

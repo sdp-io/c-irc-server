@@ -514,6 +514,19 @@
 #define ERR_USERSDONTMATCH ":%s 502 %s :Cannot change mode for other users\r\n"
 
 /*
+ * FMT_NICK
+ * Used to broadcast to relevant users when a client successfully changes their
+ * nickname.
+ *
+ * Format Args:
+ *  1. Old Nickname
+ *  2. Username
+ *  3. Hostname
+ *  4. New Nickname
+ */
+#define FMT_NICK ":%s!%s@%s NICK :%s\r\n"
+
+/*
  * FMT_PRIVMSG
  * Used to relay a private message from a sender to a target recipient.
  *

@@ -161,9 +161,30 @@ void del_from_users(int user_fd) {
   free(target_user);
 }
 
+// TODO: Add documentation
+static void relay_nick_change(struct User *sender_user, char *old_nick,
+                              char *new_nick) {
+  struct Channel *current_channel = sender_user->joined_channels;
+  char reply_buf[BUF_SIZE];
+
+  format_reply(reply_buf, BUF_SIZE, FMT_NICK, old_nick, sender_user->user_name,
+               sender_user->host_name, new_nick);
+
+  // Relay relevant change to the sender before relaying to channels
+  send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+
+  // Manual hash iteration as it is read-only
+  while (current_channel != NULL) {
+    channel_message_users(current_channel, reply_buf, sender_user->user_fd);
+
+    current_channel = (struct Channel *)current_channel->hh_user.hh_next;
+  }
+}
+
 int set_user_nick(int sender_fd, char *sender_nick) {
   // Buffer to send the corresponding numeric reply back to the sending user
   char reply_buf[BUF_SIZE];
+  char old_nick[MAX_NICK_LEN + 1]; // Space for null-terminator
   struct User *sender_user = get_user_by_fd(sender_fd);
 
   // If nick contains invalid characters, do not need to verify its availability
@@ -191,10 +212,16 @@ int set_user_nick(int sender_fd, char *sender_nick) {
   }
 
   // If sender has a pre-existing nick, free it and remove from the nick table
+  // as well as relay the change to all of the sender's actively joined channels
   if (sender_user->nick != NULL) {
-    HASH_DEL(users_nick_map, sender_user);
+    strncpy(old_nick, sender_user->nick, MAX_NICK_LEN);
+    old_nick[MAX_NICK_LEN] = '\0';
+
+    HASH_DELETE(hh_nick, users_nick_map, sender_user);
     free(sender_user->nick);
     sender_user->nick = NULL;
+
+    relay_nick_change(sender_user, old_nick, sender_nick);
   }
 
   // Allocate memory for the new nick and update user state
