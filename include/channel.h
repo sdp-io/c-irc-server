@@ -51,6 +51,36 @@ the channel. Used for checking the query user's channel modes.
 extern struct UserNode *channel_get_member(struct Channel *target_channel,
                                            struct User *query_user);
 
+/*
+ * Sets a channel's moderated mode. If the status param is true the channel is
+ * given moderated mode. if the status param is false, the channel's moderated
+ * mode is revoked.
+ */
+extern void channel_set_mode_moderated(struct Channel *target_channel,
+                                       bool status);
+
+/*
+ * Sets a channel's topic mode. If the status param is true the channel is given
+ * moderated mode. if the status param is false, the channel's moderated mode is
+ * revoked.
+ */
+extern void channel_set_mode_topic(struct Channel *target_channel, bool status);
+
+/*
+ * Sets a channel member's operator mode. If the status param is true the
+ * channel member is given channel operator status. if the status param is
+ * false, the channel member's operator status is revoked.
+ */
+extern void channel_member_set_op(struct UserNode *target_member, bool status);
+
+/*
+ * Sets a channel member's voice mode. If the status param is true the
+ * channel member is given channel voice status. if the status param is
+ * false, the channel member's voice status is revoked.
+ */
+extern void channel_member_set_voice(struct UserNode *target_member,
+                                     bool status);
+
 // TODO: Add documentation
 extern void channel_message_users(struct Channel *target_channel, char *message,
                                   int exclude_fd);

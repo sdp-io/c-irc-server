@@ -10,6 +10,7 @@
 #include <string.h>
 #include <strings.h>
 
+// TODO: Add documentation
 static void handle_privmsg_channel(struct User *sender_user,
                                    char *recipient_channel, char *message,
                                    bool is_notice) {
@@ -57,6 +58,7 @@ static void handle_privmsg_channel(struct User *sender_user,
   channel_message_users(target_channel, reply_buf, sender_user->user_fd);
 }
 
+// TODO: Add documentation
 static void handle_privmsg_user(struct User *sender_user, char *target_nick,
                                 char *message, bool is_notice) {
   char reply_buf[BUF_SIZE];
@@ -609,7 +611,7 @@ int handle_oper_cmd(int sender_fd, char *pass_param) {
   }
 
   if (strcmp(pass_param, oper_password) == 0) {
-    user_set_oper(sender_user);
+    user_set_operator_status(sender_user, true);
 
     format_reply(reply_buf, BUF_SIZE, RPL_YOUREOP, SERVER_NAME, sender_nick);
 
@@ -641,29 +643,15 @@ int handle_away_cmd(int sender_fd, char *away_msg) {
     return -1;
   }
 
-  if (away_msg != NULL) {
-    // Free pre-existing away_msg which is either a string or NULL
-    free(sender_user->away_msg);
+  bool user_is_away = user_set_away_status(sender_user, away_msg);
 
-    // Set user's away message
-    sender_user->away_msg = strdup(away_msg);
-    sender_user->is_away = true;
-
+  if (user_is_away) {
     format_reply(reply_buf, BUF_SIZE, RPL_NOWAWAY, SERVER_NAME, sender_nick);
-
     send_string(sender_fd, reply_buf, strlen(reply_buf));
-
-    return 0;
+  } else {
+    format_reply(reply_buf, BUF_SIZE, RPL_UNAWAY, SERVER_NAME, sender_nick);
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
   }
-
-  // No away message provided, clear current away message and UNAWAY the user
-  free(sender_user->away_msg);
-  sender_user->away_msg = NULL;
-  sender_user->is_away = false;
-
-  format_reply(reply_buf, BUF_SIZE, RPL_UNAWAY, SERVER_NAME, sender_nick);
-
-  send_string(sender_fd, reply_buf, strlen(reply_buf));
 
   return 0;
 }
@@ -988,7 +976,7 @@ int handle_channel_mode(struct User *sender_user, char *channel_param,
 
   if (strcmp(mode_param, "+m") == 0) {
     if (!target_channel->moderated_mode) {
-      target_channel->moderated_mode = true;
+      channel_set_mode_moderated(target_channel, true);
 
       format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
                    sender_user->user_name, sender_user->host_name,
@@ -998,7 +986,7 @@ int handle_channel_mode(struct User *sender_user, char *channel_param,
     }
     return 0;
   } else if (strcmp(mode_param, "-m") == 0) {
-    target_channel->moderated_mode = false;
+    channel_set_mode_moderated(target_channel, false);
 
     format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
                  sender_user->user_name, sender_user->host_name, channel_param,
@@ -1010,7 +998,7 @@ int handle_channel_mode(struct User *sender_user, char *channel_param,
 
   if (strcmp(mode_param, "+t") == 0) {
     if (!target_channel->topic_mode) {
-      target_channel->topic_mode = true;
+      channel_set_mode_topic(target_channel, true);
 
       format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
                    sender_user->user_name, sender_user->host_name,
@@ -1021,7 +1009,7 @@ int handle_channel_mode(struct User *sender_user, char *channel_param,
     return 0;
   } else if (strcmp(mode_param, "-t") == 0) {
     if (target_channel->topic_mode) {
-      target_channel->topic_mode = false;
+      channel_set_mode_topic(target_channel, false);
 
       format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
                    sender_user->user_name, sender_user->host_name,
@@ -1148,7 +1136,7 @@ int handle_user_mode(struct User *sender_user, char *user_param,
 
   if (strcmp(mode_param, "-o") == 0) {
     if (sender_user->is_oper) {
-      sender_user->is_oper = false;
+      user_set_operator_status(sender_user, false);
 
       format_reply(reply_buf, BUF_SIZE, FMT_MODE, sender_user->nick,
                    sender_user->user_name, sender_user->host_name, user_param,

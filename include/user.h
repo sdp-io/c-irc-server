@@ -74,19 +74,19 @@ extern struct User *get_user_by_nick(char *query_nick);
  * Grabs the User struct associated with a provided user's file descriptor
  * and returns the user's corresponding buffer.
  */
-extern char *get_user_buf(int user_fd);
+extern char *user_get_buf(int user_fd);
 
 /*
  * Grabs the User struct associated with a provided user's file descriptor
  * and returns the length of the user's corresponding buffer.
  */
-int get_user_buf_len(int user_fd);
+int user_get_buf_len(int user_fd);
 
 /*
  * Grabs the User struct associated with a provided user's file descriptor
  * and sets the length of the user's corresponding buffer to a new length.
  */
-void set_user_buf_len(int user_fd, int new_len);
+void user_set_buf_len(int user_fd, int new_len);
 
 /*
  * Return the number of unregistered users currently
@@ -106,9 +106,19 @@ extern int get_registered_user_count(void);
 extern int user_add_channel(struct User *user, struct Channel *new_channel);
 
 /*
- * Sets a user's operator status to true
+ * Sets a user's operator status and modifies the server's operator user count.
+ * If the user is given operator status (status param is true), the operator
+ * user count is incremented. If the user's operator status is revoked (status
+ * param is false), the operator user count is decremented.
  */
-extern void user_set_oper(struct User *user);
+extern void user_set_operator_status(struct User *target_user, bool status);
+
+/*
+ * Sets a user's away status based on a provided away message parameter.
+ * If the parameter is not NULL, sets the user's away message and status.
+ * If the message parameter is NULL, revokes the user's away message and status.
+ */
+extern bool user_set_away_status(struct User *target_user, char *away_msg);
 
 /*
  * Searches the list for a channel, and then removes it from the user's list of

@@ -151,15 +151,15 @@ void handle_new_connection(int listener, int *fd_count, int *fd_size,
 void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
   int sender_fd = pfds[*pfd_i].fd;
   struct User *sender_user = get_user_by_fd(sender_fd);
-  char *sender_buf = get_user_buf(sender_fd);
-  int sender_buf_len = get_user_buf_len(sender_fd);
+  char *sender_buf = user_get_buf(sender_fd);
+  int sender_buf_len = user_get_buf_len(sender_fd);
 
   int nbytes = recv(sender_fd, sender_buf + sender_buf_len,
                     BUF_SIZE - sender_buf_len, 0);
 
   int total_len = nbytes + sender_buf_len;
 
-  set_user_buf_len(sender_fd, total_len);
+  user_set_buf_len(sender_fd, total_len);
 
   if (nbytes <= 0) { // Received error, or the client has closed the connection
     if (nbytes == 0) {
@@ -204,7 +204,7 @@ void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
         }
 
         memset(sender_buf, 0, BUF_SIZE);
-        set_user_buf_len(sender_fd, 0);
+        user_set_buf_len(sender_fd, 0);
       } else {
         // Fragmented data received, copy good data to temp array
         int bytes_processed = carriage_return_index + 1;
@@ -230,7 +230,7 @@ void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
         // Move the unprocessed data to the front of the sender's buffer
         memmove(sender_buf, sender_buf + bytes_processed, remaining_bytes);
 
-        set_user_buf_len(sender_fd, remaining_bytes);
+        user_set_buf_len(sender_fd, remaining_bytes);
       }
     }
   }

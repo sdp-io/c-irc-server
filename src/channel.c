@@ -57,6 +57,38 @@ struct UserNode *channel_get_member(struct Channel *target_channel,
   return NULL;
 }
 
+void channel_set_mode_moderated(struct Channel *target_channel, bool status) {
+  if (status) {
+    target_channel->moderated_mode = true;
+  } else {
+    target_channel->moderated_mode = false;
+  }
+}
+
+void channel_set_mode_topic(struct Channel *target_channel, bool status) {
+  if (status) {
+    target_channel->topic_mode = true;
+  } else {
+    target_channel->topic_mode = false;
+  }
+}
+
+void channel_member_set_op(struct UserNode *target_member, bool status) {
+  if (status) {
+    target_member->channel_op = true;
+  } else {
+    target_member->channel_op = false;
+  }
+}
+
+void channel_member_set_voice(struct UserNode *target_member, bool status) {
+  if (status) {
+    target_member->channel_voice = true;
+  } else {
+    target_member->channel_voice = false;
+  }
+}
+
 bool channel_has_user(struct Channel *target_channel, struct User *query_user) {
   if (channel_get_member(target_channel, query_user) != NULL) {
     return true;

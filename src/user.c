@@ -20,9 +20,44 @@ static int unknown_user_count = 0;
 // Count of users that have completed the NICK and USER commands
 static int registered_user_count = 0;
 
+// Count of users that currently have operator status on the server
+static int operator_user_count = 0;
+
 int get_unknown_user_count(void) { return unknown_user_count; }
 
 int get_registered_user_count(void) { return registered_user_count; }
+
+int user_get_oper_count(void) { return operator_user_count; }
+
+void user_set_operator_status(struct User *target_user, bool status) {
+  if (status) {
+    target_user->is_oper = true;
+    operator_user_count++;
+  } else {
+    target_user->is_oper = false;
+    operator_user_count--;
+  }
+}
+
+bool user_set_away_status(struct User *target_user, char *away_msg) {
+  if (away_msg != NULL) {
+    // Free pre-existing away_msg which is either a string or NULL
+    free(target_user->away_msg);
+
+    // Set user's new away message
+    target_user->away_msg = strdup(away_msg);
+    target_user->is_away = true;
+
+    return true;
+  }
+
+  // No away message provided, clear current away message and UNAWAY the user
+  free(target_user->away_msg);
+  target_user->away_msg = NULL;
+  target_user->is_away = false;
+
+  return false;
+}
 
 struct User *user_get_head(void) { return users_nick_map; }
 
@@ -50,17 +85,17 @@ struct User *get_user_by_nick(char *query_nick) {
   return searched_user;
 }
 
-char *get_user_buf(int user_fd) {
+char *user_get_buf(int user_fd) {
   struct User *sender_user = get_user_by_fd(user_fd);
   return sender_user->user_buf;
 }
 
-int get_user_buf_len(int user_fd) {
+int user_get_buf_len(int user_fd) {
   struct User *sender_user = get_user_by_fd(user_fd);
   return sender_user->buf_len;
 }
 
-void set_user_buf_len(int user_fd, int new_len) {
+void user_set_buf_len(int user_fd, int new_len) {
   struct User *sender_user = get_user_by_fd(user_fd);
   sender_user->buf_len = new_len;
 }
@@ -305,5 +340,3 @@ void user_add_channel(struct User *user, struct Channel *new_channel) {
   HASH_ADD_KEYPTR(hh_user, user->joined_channels, new_channel->channel_name,
                   strlen(new_channel->channel_name), new_channel);
 }
-
-void user_set_oper(struct User *user) { user->is_oper = true; }
