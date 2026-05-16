@@ -13,6 +13,10 @@
 
 static struct Channel *channels_map = NULL;
 
+static int channel_count = 0;
+
+int channel_get_total(void) { return channel_count; }
+
 struct Channel *channel_get_head(void) { return channels_map; }
 
 struct Channel *channel_get_next(struct Channel *current_channel) {
@@ -32,6 +36,7 @@ int delete_channel(struct Channel *target_channel) {
   free(target_channel->channel_name);
   free(target_channel);
 
+  channel_count--;
   return 0;
 }
 
@@ -125,6 +130,7 @@ struct Channel *create_channel(char *channel_name) {
   HASH_ADD_KEYPTR(hh_global, channels_map, new_channel_name,
                   strlen(new_channel_name), new_channel);
 
+  channel_count++;
   return new_channel;
 }
 

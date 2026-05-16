@@ -80,7 +80,12 @@ extern char *user_get_buf(int user_fd);
  * Grabs the User struct associated with a provided user's file descriptor
  * and returns the length of the user's corresponding buffer.
  */
-int user_get_buf_len(int user_fd);
+extern int user_get_buf_len(int user_fd);
+
+/*
+ * Returns the total number of operators currently active on the server.
+ */
+extern int user_get_oper_count(void);
 
 /*
  * Grabs the User struct associated with a provided user's file descriptor

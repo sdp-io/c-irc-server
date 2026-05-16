@@ -347,12 +347,13 @@ int handle_lusers_cmd(int sender_fd) {
   int unknown_user_count = get_unknown_user_count();
   int registered_user_count = get_registered_user_count();
 
-  // Temporary variables for formatting of replies as channels, services,
-  // operators, and multiple servers are not currently supported
+  // NOTE: Temporary variables for formatting of replies as services and
+  // multiple servers are not currently supported
   int server_count = 0;
-  int channel_count = 0;
   int service_count = 0;
-  int operator_count = 0;
+
+  int channel_count = channel_get_total();
+  int operator_count = user_get_oper_count();
 
   char reply_buf[BUF_SIZE];
 

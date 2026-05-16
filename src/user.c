@@ -189,6 +189,10 @@ void del_from_users(int user_fd) {
   // Disconnect user from all joined channels
   user_remove_all(target_user);
 
+  if (target_user->is_oper) {
+    operator_user_count--;
+  }
+
   free(target_user->nick);
   free(target_user->user_name);
   free(target_user->real_name);

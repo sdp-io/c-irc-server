@@ -81,6 +81,11 @@ extern void channel_member_set_op(struct UserNode *target_member, bool status);
 extern void channel_member_set_voice(struct UserNode *target_member,
                                      bool status);
 
+/*
+ * Returns the total number of channels currently active on the server.
+ */
+extern int channel_get_total(void);
+
 // TODO: Add documentation
 extern void channel_message_users(struct Channel *target_channel, char *message,
                                   int exclude_fd);
