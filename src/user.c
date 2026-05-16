@@ -184,7 +184,10 @@ void del_from_users(int user_fd) {
 
   // Remove user from nick and fd hash tables
   HASH_DELETE(hh, users_fd_map, target_user);
-  HASH_DELETE(hh_nick, users_nick_map, target_user);
+
+  if (target_user->nick != NULL) {
+    HASH_DELETE(hh_nick, users_nick_map, target_user);
+  }
 
   // Disconnect user from all joined channels
   user_remove_all(target_user);
