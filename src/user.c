@@ -193,6 +193,12 @@ void del_from_users(int user_fd) {
     operator_user_count--;
   }
 
+  if (target_user->is_registered) {
+    registered_user_count--;
+  } else {
+    unknown_user_count--;
+  }
+
   free(target_user->nick);
   free(target_user->user_name);
   free(target_user->real_name);

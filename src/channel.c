@@ -237,11 +237,6 @@ int channel_remove_user(struct Channel *target_channel,
     user_node_iterator = user_node_iterator->next;
   }
 
-  // Delete empty channel
-  if (target_channel->user_list == NULL) {
-    delete_channel(target_channel);
-  }
-
   return 0;
 }
 
