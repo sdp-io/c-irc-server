@@ -21,7 +21,7 @@ extern char *oper_password;
  * Allows for ease of nickname verification and messaging capabilities.
  */
 struct User {
-  struct Channel *joined_channels; // Hash table for user's active channels
+  struct ChannelNode *joined_channels; // Hash table for user's active channels
   char user_buf[BUF_SIZE + 1];
   char *nick;
   char *host_name;
@@ -40,11 +40,7 @@ struct User {
   UT_hash_handle hh_nick; // Hashable handle for user nick
 };
 
-/*
- * Struct which acts as a container for the User struct.
- * Allows for a linked list implementation to traverse, retrieve, and modify
- * users that are currently active on the IRC server.
- */
+// TODO: Update documentation to reflect new use case
 struct UserNode {
   struct User *user_info;
   struct UserNode *next;
@@ -52,14 +48,10 @@ struct UserNode {
   bool channel_voice;
 };
 
-/*
- * Struct which acts as a container for the Channel struct.
- * Allows for a linked list implementation to traverse, retrieve, and modify
- * channels that are currently active on the IRC server.
- */
+// TODO: Update documentation to reflect new use case
 struct ChannelNode {
   struct Channel *channel_info;
-  struct ChannelNode *next;
+  UT_hash_handle hh;
 };
 
 /*
@@ -75,7 +67,6 @@ struct Channel {
   bool topic_mode;     // When true, only a channel operator can set the topic
   struct UserNode *user_list;
   UT_hash_handle hh_global; // Hash handle for all channels on the server
-  UT_hash_handle hh_user;   // Hash handle for channels in a user's channel list
 };
 
 #endif

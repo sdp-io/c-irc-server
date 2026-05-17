@@ -101,14 +101,18 @@ void user_set_buf_len(int user_fd, int new_len) {
 }
 
 void user_remove_all(struct User *target_user) {
-  struct Channel *current_channel, *temp;
+  struct ChannelNode *current_channel, *temp;
 
   // Deletion safe macro
-  HASH_ITER(hh_user, target_user->joined_channels, current_channel, temp) {
-    HASH_DELETE(hh_user, target_user->joined_channels, current_channel);
+  HASH_ITER(hh, target_user->joined_channels, current_channel, temp) {
+    HASH_DEL(target_user->joined_channels, current_channel);
 
     // Remove user from channel's active user list
-    channel_remove_user(current_channel, target_user);
+    channel_remove_user(current_channel->channel_info, target_user);
+
+    if (current_channel->channel_info->user_list == NULL) {
+      delete_channel(current_channel->channel_info);
+    }
   }
 }
 
@@ -116,23 +120,30 @@ void user_remove_all(struct User *target_user) {
 // alternative solution
 void user_remove_channel(struct User *target_user,
                          struct Channel *target_channel) {
-  HASH_DELETE(hh_user, target_user->joined_channels, target_channel);
+  struct ChannelNode *removed_channel;
+
+  HASH_FIND(hh, target_user->joined_channels, target_channel->channel_name,
+            strlen(target_channel->channel_name), removed_channel);
+
+  HASH_DEL(target_user->joined_channels, removed_channel);
+
+  removed_channel->channel_info = NULL;
+  free(removed_channel);
 }
 
 bool users_share_channel(struct User *requester, struct User *candidate) {
-  struct Channel *requester_channels = requester->joined_channels;
+  struct ChannelNode *requester_channels = requester->joined_channels;
   while (requester_channels != NULL) {
-    struct Channel *shared_channel = NULL;
-    char *channel_name = requester_channels->channel_name;
+    struct ChannelNode *shared_channel = NULL;
+    char *channel_name = requester_channels->channel_info->channel_name;
 
-    HASH_FIND(hh_user, candidate->joined_channels, channel_name,
-              strlen(channel_name), shared_channel);
+    HASH_FIND_PTR(candidate->joined_channels, channel_name, shared_channel);
 
     if (shared_channel != NULL) {
       return true;
     }
 
-    requester_channels = requester_channels->hh_user.next;
+    requester_channels = (struct ChannelNode *)requester_channels->hh.hh_next;
   }
 
   return false;
@@ -212,7 +223,7 @@ void del_from_users(int user_fd) {
 // TODO: Add documentation
 static void relay_nick_change(struct User *sender_user, char *old_nick,
                               char *new_nick) {
-  struct Channel *current_channel = sender_user->joined_channels;
+  struct ChannelNode *current_channel = sender_user->joined_channels;
   char reply_buf[BUF_SIZE];
 
   format_reply(reply_buf, BUF_SIZE, FMT_NICK, old_nick, sender_user->user_name,
@@ -223,9 +234,10 @@ static void relay_nick_change(struct User *sender_user, char *old_nick,
 
   // Manual hash iteration as it is read-only
   while (current_channel != NULL) {
-    channel_message_users(current_channel, reply_buf, sender_user->user_fd);
+    channel_message_users(current_channel->channel_info, reply_buf,
+                          sender_user->user_fd);
 
-    current_channel = (struct Channel *)current_channel->hh_user.hh_next;
+    current_channel = (struct ChannelNode *)current_channel->hh.hh_next;
   }
 }
 
@@ -350,6 +362,9 @@ void set_user_username(int sender_fd, char *user_param, char *mode_param,
 }
 
 void user_add_channel(struct User *user, struct Channel *new_channel) {
-  HASH_ADD_KEYPTR(hh_user, user->joined_channels, new_channel->channel_name,
-                  strlen(new_channel->channel_name), new_channel);
+  struct ChannelNode *joined_channel = malloc(sizeof(struct ChannelNode));
+  joined_channel->channel_info = new_channel;
+
+  HASH_ADD_KEYPTR(hh, user->joined_channels, new_channel->channel_name,
+                  strlen(new_channel->channel_name), joined_channel);
 }
