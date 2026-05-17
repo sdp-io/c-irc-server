@@ -173,8 +173,6 @@ int channel_add_user(struct Channel *channel, struct User *new_user) {
   channel->user_list = new_user_node;
   channel->total_users += 1;
 
-  // TODO: Add new channel to new_user channel list either here or in user.c
-
   return 0;
 }
 

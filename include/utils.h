@@ -1,11 +1,13 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stdbool.h>
+
 /*
  * Given a nickname string, confirms that the string is not null, contains
  * a valid first character, and does not exceed the MAX_NICK_LEN.
  */
-extern int is_valid_nick(char *nick);
+extern bool is_valid_nick(char *nick);
 
 /*
  * Given a global numeric reply macro, formats the

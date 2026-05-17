@@ -116,8 +116,6 @@ void user_remove_all(struct User *target_user) {
   }
 }
 
-// TODO: This will always fail to send to the disconnected user, need
-// alternative solution
 void user_remove_channel(struct User *target_user,
                          struct Channel *target_channel) {
   struct ChannelNode *removed_channel;
@@ -220,7 +218,10 @@ void del_from_users(int user_fd) {
   free(target_user);
 }
 
-// TODO: Add documentation
+/*
+ * Upon a successfully NICK call by a user, relays the change to all channels
+ * joined by the sender.
+ */
 static void relay_nick_change(struct User *sender_user, char *old_nick,
                               char *new_nick) {
   struct ChannelNode *current_channel = sender_user->joined_channels;

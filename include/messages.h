@@ -210,11 +210,31 @@
  */
 #define RPL_CHANNELMODEIS ":%s 324 %s %s %s\r\n"
 
-// TODO: 331 RPL_NOTOPIC Add documentation
-#define RPL_NOTOPIC ":%s 331 %s :No topic is set\r\n"
+/*
+ * 331 RPL_NOTOPIC
+ * Sent in response to a TOPIC command when the user requests the topic
+ * of a channel, but no topic has been set for that channel.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname (the user requesting the topic)
+ *  3. Channel Name
+ */
+#define RPL_NOTOPIC ":%s 331 %s %s :No topic is set\r\n"
 
-// TODO: 332 RPL_TOPIC Add documentation
-#define RPL_TOPIC ":%s 332 %s :%s\r\n"
+/*
+ * 332 RPL_TOPIC
+ * Sent in response to a TOPIC command to inform a user of the current
+ * topic of a channel, or automatically sent when a user successfully
+ * joins a channel that has a topic set.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname (the user receiving the topic)
+ *  3. Channel Name
+ *  4. The Topic String
+ */
+#define RPL_TOPIC ":%s 332 %s %s :%s\r\n"
 
 /*
  * 352 RPL_WHOREPLY

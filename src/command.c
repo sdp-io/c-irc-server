@@ -6,11 +6,14 @@
 #include "utils.h"
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
-// TODO: Add documentation
+/*
+ * Helper function called by the PRIVMSG+NOTICE handler. Called when the target
+ * of the message is a channel. Attempts to relay the provided message to all of
+ * the members of the target channel.
+ */
 static void handle_privmsg_channel(struct User *sender_user,
                                    char *recipient_channel, char *message,
                                    bool is_notice) {
@@ -58,7 +61,11 @@ static void handle_privmsg_channel(struct User *sender_user,
   channel_message_users(target_channel, reply_buf, sender_user->user_fd);
 }
 
-// TODO: Add documentation
+/*
+ * Helper function called by the PRIVMSG+NOTICE handler. Called when the target
+ * of the message is a user. Attempts to relay the provided message to the
+ * target user.
+ */
 static void handle_privmsg_user(struct User *sender_user, char *target_nick,
                                 char *message, bool is_notice) {
   char reply_buf[BUF_SIZE];
@@ -341,7 +348,6 @@ int handle_whois_cmd(int sender_fd, char *query_nick) {
 }
 
 int handle_lusers_cmd(int sender_fd) {
-  // TODO: Support and handle mask and target parameters
   int reply_status;
 
   int unknown_user_count = get_unknown_user_count();
@@ -454,13 +460,7 @@ int handle_join_cmd(int sender_fd, char *channel_name) {
     return -1;
   }
 
-  // TODO: Ensure that this is not deleting pre-existing channels
-  int user_status = user_add_channel(sender_user, joined_channel);
-  if (user_status == -1) {
-    printf("handle_join_cmd: error adding channel to user channel list\n");
-    delete_channel(joined_channel);
-    return -1;
-  }
+  user_add_channel(sender_user, joined_channel);
 
   return 0;
 }
@@ -498,7 +498,6 @@ int handle_part_cmd(int sender_fd, char *channel_name, char *parting_message) {
 }
 
 int handle_topic_cmd(int sender_fd, char *channel_name, char *topic_message) {
-  // TODO: Implement ERR_CHANOPRIVISNEEDED after modes are implemented
   char reply_buf[BUF_SIZE];
 
   struct User *sender_user = get_user_by_fd(sender_fd);
@@ -580,10 +579,11 @@ int handle_topic_cmd(int sender_fd, char *channel_name, char *topic_message) {
   // No channel topic provided, send channel's current topic to user
   char *channel_topic = target_channel->topic;
   if (channel_topic == NULL) {
-    format_reply(reply_buf, BUF_SIZE, RPL_NOTOPIC, SERVER_NAME, channel_name);
+    format_reply(reply_buf, BUF_SIZE, RPL_NOTOPIC, SERVER_NAME, sender_nick,
+                 channel_name);
   } else {
-    format_reply(reply_buf, BUF_SIZE, RPL_TOPIC, SERVER_NAME, channel_name,
-                 channel_topic);
+    format_reply(reply_buf, BUF_SIZE, RPL_TOPIC, SERVER_NAME, sender_nick,
+                 channel_name, channel_topic);
   }
 
   send_string(sender_fd, reply_buf, strlen(reply_buf));
@@ -766,7 +766,6 @@ int handle_who_cmd(int sender_fd, char *mask_param) {
     }
   } else if (mask_param == NULL || mask_param[0] == '0' ||
              mask_param[0] == '*') {
-    // TODO: Implement WHO for non-server masks
     struct User *current_user = user_get_head();
 
     while (current_user != NULL) {
@@ -833,8 +832,6 @@ int handle_names_cmd(int sender_fd, char *channel_param) {
 
     int nick_list_len = MAX_NICK_LEN * 6; // 5 names with space for modes info
     char nick_list[nick_list_len];
-    // TODO: Remove. Can just check strlen(formatted_nick) + strlen(nick_list)
-    // >= nick_list_len;
 
     nick_list[0] = '\0'; // Prepare for strncat
     while (channel_user != NULL) {

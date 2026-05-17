@@ -108,7 +108,7 @@ extern int get_registered_user_count(void);
  * Allocates memory for a ChannelNode struct to contain the provided channel and
  * add it to the user's list of currently joined channels.
  */
-extern int user_add_channel(struct User *user, struct Channel *new_channel);
+extern void user_add_channel(struct User *user, struct Channel *new_channel);
 
 /*
  * Sets a user's operator status and modifies the server's operator user count.

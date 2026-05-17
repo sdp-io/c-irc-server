@@ -41,7 +41,9 @@ extern int channel_remove_user(struct Channel *channel_users,
  */
 extern int delete_channel(struct Channel *target_channel);
 
-// TODO: Add documentation
+/*
+ * Retrieves a matching Channel struct based on a channel name.
+ */
 extern struct Channel *get_channel(char *channel_name);
 
 /*
@@ -86,18 +88,31 @@ extern void channel_member_set_voice(struct UserNode *target_member,
  */
 extern int channel_get_total(void);
 
-// TODO: Add documentation
+/*
+ * Sends a message to every user within the channel. Recipients may be excluded
+ * by specifying their file descriptor. The exclude parameter may be set to -1
+ * to ensure all members receive the message.
+ */
 extern void channel_message_users(struct Channel *target_channel, char *message,
                                   int exclude_fd);
 
-// TODO: Add documentation
+/*
+ * Checks a channel to see if the query user exists within its list of members.
+ * Used to ensure a JOINing user is not already active within a channel.
+ */
 extern bool channel_has_user(struct Channel *target_channel,
                              struct User *query_user);
 
-// TODO: Add documentation
+/*
+ * Used to unset the topic for a channel. Handles memory cleanup for any
+ * allocated topic string.
+ */
 extern void channel_remove_topic(struct Channel *target_channel);
 
-// TODO: Add documentation
+/*
+ * Sets the topic for a specified channel with a string containing the new
+ * topic. Allocates memory for the new topic.
+ */
 extern void channel_set_topic(struct Channel *target_channel, char *new_topic);
 
 /*
