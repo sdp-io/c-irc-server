@@ -137,7 +137,7 @@ bool users_share_channel(struct User *requester, struct User *candidate) {
     struct ChannelNode *shared_channel = NULL;
     char *channel_name = requester_channels->channel_info->channel_name;
 
-    HASH_FIND_PTR(candidate->joined_channels, channel_name, shared_channel);
+    HASH_FIND_STR(candidate->joined_channels, channel_name, shared_channel);
 
     if (shared_channel != NULL) {
       return true;
