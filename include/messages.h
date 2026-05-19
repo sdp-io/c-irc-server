@@ -150,6 +150,17 @@
 #define RPL_WHOISSERVER ":%s 312 %s %s :%s\r\n"
 
 /*
+ * 313 RPL_WHOISOPERATOR
+ * Sent in response to a WHOIS query if the target user is an IRC operator.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Sender Nickname (the user requesting the WHOIS)
+ *  3. Target Nickname (the user being queried)
+ */
+#define RPL_WHOISOPERATOR ":%s 313 %s %s :is an IRC operator\r\n"
+
+/*
  * 315 RPL_ENDOFWHO
  * Sent after all RPL_WHOREPLY replies have been sent. Used to mark the end of
  * the WHO list.
@@ -171,6 +182,19 @@
  *  3. Query Nickname
  */
 #define RPL_ENDOFWHOIS ":%s 318 %s :End of WHOIS list\r\n"
+
+/*
+ * 319 RPL_WHOISCHANNELS
+ * Sent in response to a WHOIS query. Contains a space-separated list
+ * of channels the target user is currently in.
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Sender Nickname (the user requesting the WHOIS)
+ *  3. Target Nickname (the user being queried)
+ *  4. Space-separated string of channels (e.g., "#uga @#linux +#cs")
+ */
+#define RPL_WHOISCHANNELS ":%s 319 %s %s :%s\r\n"
 
 /*
  * 322 RPL_LIST

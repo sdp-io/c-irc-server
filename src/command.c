@@ -266,6 +266,63 @@ int handle_motd_cmd(int sender_fd) {
   return 0;
 }
 
+/*
+ * Helper function for the WHOIS command handler. Fills a buffer with the names
+ * of the target's joined channels, formats it (RPL_WHOISCHANNELS) and sends the
+ * numeric replies back to the sender.
+ */
+static void send_whois_channels(struct User *sender, struct User *target) {
+  char reply_buf[BUF_SIZE];
+  int channels_list_len = MAX_NICK_LEN * 6;
+  char channels_list[channels_list_len];
+
+  channels_list[0] = '\0'; // Prepare for strcat
+  struct ChannelNode *current_channel = target->joined_channels;
+  while (current_channel != NULL) {
+    struct Channel *channel_info = current_channel->channel_info;
+    struct UserNode *channel_user = channel_get_member(channel_info, target);
+    char *channel_name = current_channel->channel_info->channel_name;
+    char formatted_name[MAX_NICK_LEN + 3]; // Null-terminator and formatting
+
+    // Add mode prefix to formatted channel name based on taret's modes
+    if (channel_user->channel_op) {
+      formatted_name[0] = '@';
+      formatted_name[1] = '\0';
+    } else if (channel_user->channel_voice) {
+      formatted_name[0] = '+';
+      formatted_name[1] = '\0';
+    } else {
+      formatted_name[0] = '\0';
+    }
+
+    strcat(formatted_name, channel_name);
+    strcat(formatted_name, " "); // Space after first formatted name in list
+    int total_len = strlen(formatted_name) + strlen(channels_list);
+
+    // Send current channel names list before concatenation to prevent overflow
+    if (total_len >= channels_list_len) {
+      format_reply(reply_buf, BUF_SIZE, RPL_WHOISCHANNELS, SERVER_NAME,
+                   sender->nick, target->nick, channels_list);
+
+      send_string(sender->user_fd, reply_buf, strlen(reply_buf));
+
+      channels_list[0] = '\0';
+    }
+
+    strcat(channels_list, formatted_name);
+
+    current_channel = (struct ChannelNode *)current_channel->hh.next;
+  }
+
+  // Send any remaining contents of the channel names list
+  if (channels_list[0] != '\0') {
+    format_reply(reply_buf, BUF_SIZE, RPL_WHOISCHANNELS, SERVER_NAME,
+                 sender->nick, target->nick, channels_list);
+
+    send_string(sender->user_fd, reply_buf, strlen(reply_buf));
+  }
+}
+
 int handle_whois_cmd(int sender_fd, char *query_nick) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char reply_buf[BUF_SIZE];
@@ -321,6 +378,11 @@ int handle_whois_cmd(int sender_fd, char *query_nick) {
     return -1;
   }
 
+  // Send RPL_WHOISCHANNELS
+  if (query_user->joined_channels) {
+    send_whois_channels(sender_user, query_user);
+  }
+
   // Send RPL_WHOISSERVER (format with SERVER_NAME macro directly as we are
   // not currently a part of a network of servers)
   format_reply(reply_buf, BUF_SIZE, RPL_WHOISSERVER, SERVER_NAME, query_nick,
@@ -333,6 +395,22 @@ int handle_whois_cmd(int sender_fd, char *query_nick) {
     return -1;
   }
 
+  // Send RPL_AWAY
+  if (query_user->is_away) {
+    format_reply(reply_buf, BUF_SIZE, RPL_AWAY, SERVER_NAME, sender_user->nick,
+                 query_nick, query_user->away_msg);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+  }
+
+  // Send RPL_WHOISOPERATOR
+  if (query_user->is_oper) {
+    format_reply(reply_buf, BUF_SIZE, RPL_WHOISOPERATOR, SERVER_NAME,
+                 sender_user->nick, query_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+  }
+
   // Send RPL_ENDOFWHOIS
   format_reply(reply_buf, BUF_SIZE, RPL_ENDOFWHOIS, SERVER_NAME, query_nick);
 
@@ -343,7 +421,6 @@ int handle_whois_cmd(int sender_fd, char *query_nick) {
     return -1;
   }
 
-  // TODO: Add further server replies once channels are implemented
   return 0;
 }
 
@@ -802,6 +879,7 @@ int handle_who_cmd(int sender_fd, char *mask_param) {
     }
   }
 
+  // TODO: Replace with correct numeric reply
   format_reply(reply_buf, BUF_SIZE, RPL_ENDOFWHOIS, SERVER_NAME, sender_nick);
 
   send_string(sender_fd, reply_buf, strlen(reply_buf));
@@ -1017,6 +1095,8 @@ int handle_channel_mode(struct User *sender_user, char *channel_param,
     }
     return 0;
   }
+
+  // TODO: Fix segfault upon memberless calls with invalid MODE
 
   // Handle MODE commands on a channel member
   struct User *channel_member = get_user_by_nick(member_param);
