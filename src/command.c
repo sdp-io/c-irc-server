@@ -107,13 +107,11 @@ static void handle_privmsg_user(struct User *sender_user, char *target_nick,
   send_string(target_user->user_fd, reply_buf, strlen(reply_buf));
 }
 
-// TODO: Move all reply_status checks to send_string helper function
 int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
                    bool is_notice) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nickname = (sender_user->nick != NULL) ? sender_user->nick : "*";
   char reply_buf[BUF_SIZE];
-  int reply_status;
 
   // Send ERR_NORECIPIENT numeric is command called is not a NOTICE
   if (recipient_nick == NULL) {
@@ -122,11 +120,7 @@ int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
       format_reply(reply_buf, BUF_SIZE, ERR_NORECIPIENT, SERVER_NAME,
                    sender_nickname, cmd_name);
 
-      reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-      if (reply_status == -1) {
-        fprintf(stderr, "handle_msg_cmd: error sending ERR_NORECIPIENT to %d\n",
-                sender_fd);
-      }
+      send_string(sender_fd, reply_buf, strlen(reply_buf));
     }
     return -1;
   }
@@ -137,12 +131,7 @@ int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
       format_reply(reply_buf, BUF_SIZE, ERR_NOTEXTTOSEND, SERVER_NAME,
                    sender_nickname);
 
-      reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-      if (reply_status == -1) {
-        fprintf(stderr,
-                "handle_msg_cmd: error sending ERR_NOTEXTTOSEND to %d\n",
-                sender_fd);
-      }
+      send_string(sender_fd, reply_buf, strlen(reply_buf));
     }
     return -1;
   }
@@ -153,12 +142,7 @@ int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
       format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
                    sender_nickname);
 
-      reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-      if (reply_status == -1) {
-        fprintf(stderr,
-                "handle_msg_cmd: error sending ERR_NOTREGISTERED to %d\n",
-                sender_fd);
-      }
+      send_string(sender_fd, reply_buf, strlen(reply_buf));
     }
     return -1;
   }
@@ -175,35 +159,23 @@ int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
 
 int handle_ping_cmd(int sender_fd, char *message) {
   char reply_buf[BUF_SIZE];
-  int reply_status;
 
   // Send ERR_NOORIGIN
   if (message == NULL) {
     format_reply(reply_buf, BUF_SIZE, ERR_NOORIGIN, SERVER_NAME);
 
-    reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-    if (reply_status == -1) {
-      fprintf(stderr, "handle_ping_cmd: error sending ERR_NOORIGIN to %d\n",
-              sender_fd);
-    }
-    return -1;
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
   }
 
   format_reply(reply_buf, BUF_SIZE, FMT_PING, SERVER_NAME, SERVER_NAME,
                message);
 
-  reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-  if (reply_status == -1) {
-    fprintf(stderr, "handle_ping_cmd: error sending ping response to %d\n",
-            sender_fd);
-    return -1;
-  }
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
   return 0;
 }
 
 void handle_unknown_cmd(int sender_fd, char *command) {
   char reply_buf[BUF_SIZE];
-  int reply_status;
 
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
@@ -211,17 +183,11 @@ void handle_unknown_cmd(int sender_fd, char *command) {
   format_reply(reply_buf, BUF_SIZE, ERR_UNKNOWNCOMMAND, SERVER_NAME,
                sender_nick, command);
 
-  reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-  if (reply_status == -1) {
-    fprintf(stderr,
-            "handle_unknown_cmd: error sending ERR_UNKNOWNCOMMAND to %d\n",
-            sender_fd);
-  }
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
 }
 
 int handle_motd_cmd(int sender_fd) {
   FILE *motd_file;
-  int reply_status;
 
   if ((motd_file = fopen("motd.txt", "r")) == NULL) {
     fprintf(stderr, "handle_motd_cmd: error opening motd.txt\n");
@@ -234,33 +200,18 @@ int handle_motd_cmd(int sender_fd) {
   format_reply(reply_buf, sizeof(reply_buf), RPL_MOTDSTART, SERVER_NAME,
                SERVER_NAME);
 
-  reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-  if (reply_status == -1) {
-    fprintf(stderr, "handle_motd_cmd: error sending RPL_MOTDSTART to %d\n",
-            sender_fd);
-    return -1;
-  }
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
 
   while (fgets(motd_buf, sizeof(motd_buf), motd_file)) {
     motd_buf[strcspn(motd_buf, "\r\n")] = '\0'; // Trim carriage return
     format_reply(reply_buf, sizeof(reply_buf), RPL_MOTD, SERVER_NAME, motd_buf);
 
-    reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-    if (reply_status == -1) {
-      fprintf(stderr, "handle_motd_cmd: error sending RPL_MOTD to %d\n",
-              sender_fd);
-      return -1;
-    }
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
   }
 
   format_reply(reply_buf, sizeof(reply_buf), RPL_ENDOFMOTD, SERVER_NAME);
 
-  reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-  if (reply_status == -1) {
-    fprintf(stderr, "handle_motd_cmd: error sending RPL_ENDOFMOTD to %d\n",
-            sender_fd);
-    return -1;
-  }
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
 
   fclose(motd_file);
   return 0;
@@ -326,19 +277,13 @@ static void send_whois_channels(struct User *sender, struct User *target) {
 int handle_whois_cmd(int sender_fd, char *query_nick) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char reply_buf[BUF_SIZE];
-  int reply_status;
 
   if (!sender_user->is_registered) {
     char *sender_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
     format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
                  sender_nick);
 
-    reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-    if (reply_status == -1) {
-      fprintf(stderr,
-              "handle_whois_cmd: error sending ERR_NOTREGISTERED to %d\n",
-              sender_fd);
-    }
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
     return -1;
   }
 
@@ -355,11 +300,7 @@ int handle_whois_cmd(int sender_fd, char *query_nick) {
     format_reply(reply_buf, BUF_SIZE, ERR_NOSUCHNICK, SERVER_NAME, sender_nick,
                  query_nick);
 
-    reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-    if (reply_status == -1) {
-      fprintf(stderr, "handle_whois_cmd: error sending ERR_NOSUCHNICK to %d\n",
-              sender_fd);
-    }
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
     return -1;
   }
 
@@ -371,12 +312,7 @@ int handle_whois_cmd(int sender_fd, char *query_nick) {
   format_reply(reply_buf, BUF_SIZE, RPL_WHOISUSER, SERVER_NAME, query_nick,
                query_username, query_hostname, query_realname);
 
-  reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-  if (reply_status == -1) {
-    fprintf(stderr, "handle_whois_cmd: error sending RPL_WHOISUSER to %d\n",
-            sender_fd);
-    return -1;
-  }
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
 
   // Send RPL_WHOISCHANNELS
   if (query_user->joined_channels) {
@@ -388,12 +324,7 @@ int handle_whois_cmd(int sender_fd, char *query_nick) {
   format_reply(reply_buf, BUF_SIZE, RPL_WHOISSERVER, SERVER_NAME, query_nick,
                SERVER_NAME, SERVER_INFO);
 
-  reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-  if (reply_status == -1) {
-    fprintf(stderr, "handle_whois_cmd: error sending RPL_WHOISSERVER to %d\n",
-            sender_fd);
-    return -1;
-  }
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
 
   // Send RPL_AWAY
   if (query_user->is_away) {
@@ -414,19 +345,12 @@ int handle_whois_cmd(int sender_fd, char *query_nick) {
   // Send RPL_ENDOFWHOIS
   format_reply(reply_buf, BUF_SIZE, RPL_ENDOFWHOIS, SERVER_NAME, query_nick);
 
-  reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-  if (reply_status == -1) {
-    fprintf(stderr, "handle_whois_cmd: error sending RPL_ENDOFWHOIS to %d\n",
-            sender_fd);
-    return -1;
-  }
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
 
   return 0;
 }
 
 int handle_lusers_cmd(int sender_fd) {
-  int reply_status;
-
   int unknown_user_count = get_unknown_user_count();
   int registered_user_count = get_registered_user_count();
 
@@ -444,56 +368,30 @@ int handle_lusers_cmd(int sender_fd) {
   format_reply(reply_buf, BUF_SIZE, RPL_LUSERCLIENT, SERVER_NAME,
                registered_user_count, service_count, server_count);
 
-  reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-  if (reply_status == -1) {
-    fprintf(stderr, "handle_luser_cmd: error sending RPL_LUSERCLIENT to %d\n",
-            sender_fd);
-    return -1;
-  }
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
 
   // RPL_LUSEROP reply
   format_reply(reply_buf, BUF_SIZE, RPL_LUSEROP, SERVER_NAME, operator_count);
 
-  reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-  if (reply_status == -1) {
-    fprintf(stderr, "handle_luser_cmd: error sending RPL_LUSEROP to %d\n",
-            sender_fd);
-    return -1;
-  }
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
 
   // RPL_LUSERUNKNOWN reply
   format_reply(reply_buf, BUF_SIZE, RPL_LUSERUNKNOWN, SERVER_NAME,
                unknown_user_count);
 
-  reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-  if (reply_status == -1) {
-    fprintf(stderr,
-            "handle_luser_cmd: error sending RPL_LUSERUNKNOWN reply to %d\n",
-            sender_fd);
-    return -1;
-  }
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
 
   // RPL_LUSERCHANNELS reply
   format_reply(reply_buf, BUF_SIZE, RPL_LUSERCHANNELS, SERVER_NAME,
                channel_count);
 
-  reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-  if (reply_status == -1) {
-    fprintf(stderr, "handle_luser_cmd: error sending RPL_LUSERCHANNELS to %d\n",
-            sender_fd);
-    return -1;
-  }
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
 
   // RPL_LUSERME reply
   format_reply(reply_buf, BUF_SIZE, RPL_LUSERME, SERVER_NAME,
                registered_user_count, server_count);
 
-  reply_status = send_string(sender_fd, reply_buf, strlen(reply_buf));
-  if (reply_status == -1) {
-    fprintf(stderr, "handle_luser_cmd: error sending RPL_LUSERME to %d\n",
-            sender_fd);
-    return -1;
-  }
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
 
   return 0;
 }
