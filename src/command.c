@@ -1042,6 +1042,11 @@ int handle_channel_mode(struct User *sender_user, char *channel_param,
   struct UserNode *sender_member =
       channel_get_member(target_channel, sender_user);
 
+  if (sender_member == NULL) {
+    // TODO: Send ERR_USERNOTINCHANNEL
+    return -1;
+  }
+
   if (!sender_member->channel_op && !sender_user->is_oper) {
     format_reply(reply_buf, BUF_SIZE, ERR_CHANOPRIVSNEEDED, SERVER_NAME,
                  sender_user->nick, channel_param);
@@ -1096,7 +1101,16 @@ int handle_channel_mode(struct User *sender_user, char *channel_param,
     return 0;
   }
 
-  // TODO: Fix segfault upon memberless calls with invalid MODE
+  // Mode parameter does not match any currently supported modes
+  if (member_param == NULL) {
+    char unknown_mode = mode_param[1];
+    format_reply(reply_buf, BUF_SIZE, ERR_UNKNOWNMODE, SERVER_NAME,
+                 sender_user->nick, unknown_mode, channel_param);
+
+    send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+
+    return 0;
+  }
 
   // Handle MODE commands on a channel member
   struct User *channel_member = get_user_by_nick(member_param);
@@ -1160,8 +1174,7 @@ int handle_channel_mode(struct User *sender_user, char *channel_param,
     return 0;
   }
 
-  // If this point is reached, mode parameter does not match any currently
-  // supported modes
+  // Mode parameter does not match any currently supported modes
   char unknown_mode = mode_param[1];
   format_reply(reply_buf, BUF_SIZE, ERR_UNKNOWNMODE, SERVER_NAME,
                sender_user->nick, unknown_mode, channel_param);
