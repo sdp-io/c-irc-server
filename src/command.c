@@ -1243,7 +1243,14 @@ int handle_user_mode(struct User *sender_user, char *user_param,
     return 0;
   }
 
-  // TODO: Send ERR_UMODEUNKNOWNFLAG
+  // Mode parameter does not match any currently supported modes
+  char unknown_mode = mode_param[1];
+  format_reply(reply_buf, BUF_SIZE, ERR_UNKNOWNMODE, SERVER_NAME,
+               sender_user->nick, unknown_mode, sender_user->nick);
+
+  send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+
+  return 0;
   return 0;
 }
 
