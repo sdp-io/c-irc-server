@@ -611,6 +611,19 @@
 #define FMT_TOPIC ":%s!%s@%s TOPIC %s :%s\r\n"
 
 /*
+ * FMT_JOIN
+ * Broadcast to relevant users when a client successfully joins a channel.
+ * This is also sent to the joining client as confirmation.
+ *
+ * Format Args:
+ *  1. Sender Nickname
+ *  2. Sender Username
+ *  3. Sender Hostname
+ *  4. Channel Name
+ */
+#define FMT_JOIN ":%s!%s@%s JOIN :%s\r\n"
+
+/*
  * FMT_PART
  * Used to relay a response upon the PARTing of a user from a specified channel.
  * Relays an optional PARTing string to users remaining in the channel.

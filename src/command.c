@@ -396,6 +396,86 @@ int handle_lusers_cmd(int sender_fd) {
   return 0;
 }
 
+int handle_names_cmd(int sender_fd, char *channel_param) {
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
+  char reply_buf[BUF_SIZE];
+
+  if (!sender_user->is_registered) {
+    format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
+                 sender_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+    return -1;
+  }
+
+  if (channel_param) {
+    struct Channel *target_channel = get_channel(channel_param);
+    struct UserNode *channel_user = NULL;
+
+    if (target_channel != NULL) {
+      channel_user = target_channel->user_list;
+    }
+
+    int nick_list_len = MAX_NICK_LEN * 6; // 5 names with space for modes info
+    char nick_list[nick_list_len];
+
+    nick_list[0] = '\0'; // Prepare for strncat
+    while (channel_user != NULL) {
+      char *current_nick = channel_user->user_info->nick;
+      char formatted_nick[MAX_NICK_LEN + 3]; // Null-terminator and formatting
+
+      // Add mode prefix to formatted_nick before adding the nick
+      if (channel_user->channel_op) {
+        formatted_nick[0] = '@';
+        formatted_nick[1] = '\0';
+      } else if (channel_user->channel_voice) {
+        formatted_nick[0] = '+';
+        formatted_nick[1] = '\0';
+      } else {
+        formatted_nick[0] = '\0';
+      }
+
+      strcat(formatted_nick, current_nick);
+      strcat(formatted_nick, " "); // Space after first formatted nick in list
+      int total_len = strlen(formatted_nick) + strlen(nick_list);
+
+      // Send current nick list before concatenation to prevent overflow
+      if (total_len >= nick_list_len) {
+        format_reply(reply_buf, BUF_SIZE, RPL_NAMREPLY, SERVER_NAME,
+                     sender_nick, channel_param, nick_list);
+
+        send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+        nick_list[0] = '\0';
+      }
+
+      strcat(nick_list, formatted_nick);
+
+      channel_user = channel_user->next;
+    }
+
+    // Send any remaining contents of the nick list
+    if (nick_list[0] != '\0') {
+      format_reply(reply_buf, BUF_SIZE, RPL_NAMREPLY, SERVER_NAME, sender_nick,
+                   channel_param, nick_list);
+
+      send_string(sender_fd, reply_buf, strlen(reply_buf));
+    }
+  }
+
+  // Handle formatting for parameterless NAMES commands
+  channel_param = channel_param != NULL ? channel_param : "*";
+
+  format_reply(reply_buf, BUF_SIZE, RPL_ENDOFNAMES, SERVER_NAME, sender_nick,
+               channel_param);
+
+  send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+  return 0;
+}
+
 int handle_join_cmd(int sender_fd, char *channel_name) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
@@ -436,6 +516,23 @@ int handle_join_cmd(int sender_fd, char *channel_name) {
   }
 
   user_add_channel(sender_user, joined_channel);
+
+  // Relay the JOIN message to all users within the channel (IRC 2812, 3.1.2)
+  format_reply(reply_buf, BUF_SIZE, FMT_JOIN, sender_nick,
+               sender_user->user_name, sender_user->host_name, channel_name);
+
+  channel_message_users(joined_channel, reply_buf, -1);
+
+  // Relay the channel's topic to the joining user if there exists one
+  if (joined_channel->topic != NULL) {
+    format_reply(reply_buf, BUF_SIZE, RPL_TOPIC, SERVER_NAME, sender_nick,
+                 channel_name, joined_channel->topic);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+  }
+
+  // Relay the NAMES list for the channel to the sending user
+  handle_names_cmd(sender_fd, channel_name);
 
   return 0;
 }
@@ -777,90 +874,12 @@ int handle_who_cmd(int sender_fd, char *mask_param) {
     }
   }
 
-  // TODO: Replace with correct numeric reply
-  format_reply(reply_buf, BUF_SIZE, RPL_ENDOFWHOIS, SERVER_NAME, sender_nick);
+  mask_param = mask_param != NULL ? mask_param : "*";
+
+  format_reply(reply_buf, BUF_SIZE, RPL_ENDOFWHO, SERVER_NAME, sender_nick,
+               mask_param);
 
   send_string(sender_fd, reply_buf, strlen(reply_buf));
-  return 0;
-}
-
-int handle_names_cmd(int sender_fd, char *channel_param) {
-  struct User *sender_user = get_user_by_fd(sender_fd);
-  char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
-  char reply_buf[BUF_SIZE];
-
-  if (!sender_user->is_registered) {
-    format_reply(reply_buf, BUF_SIZE, ERR_NOTREGISTERED, SERVER_NAME,
-                 sender_nick);
-
-    send_string(sender_fd, reply_buf, strlen(reply_buf));
-
-    return -1;
-  }
-
-  if (channel_param) {
-    struct Channel *target_channel = get_channel(channel_param);
-    struct UserNode *channel_user = NULL;
-
-    if (target_channel != NULL) {
-      channel_user = target_channel->user_list;
-    }
-
-    int nick_list_len = MAX_NICK_LEN * 6; // 5 names with space for modes info
-    char nick_list[nick_list_len];
-
-    nick_list[0] = '\0'; // Prepare for strncat
-    while (channel_user != NULL) {
-      char *current_nick = channel_user->user_info->nick;
-      char formatted_nick[MAX_NICK_LEN + 3]; // Null-terminator and formatting
-
-      // Add mode prefix to formatted_nick before adding the nick
-      if (channel_user->channel_op) {
-        formatted_nick[0] = '@';
-        formatted_nick[1] = '\0';
-      } else if (channel_user->channel_voice) {
-        formatted_nick[0] = '+';
-        formatted_nick[1] = '\0';
-      } else {
-        formatted_nick[0] = '\0';
-      }
-
-      strcat(formatted_nick, current_nick);
-      strcat(formatted_nick, " "); // Space after first formatted nick in list
-      int total_len = strlen(formatted_nick) + strlen(nick_list);
-
-      // Send current nick list before concatenation to prevent overflow
-      if (total_len >= nick_list_len) {
-        format_reply(reply_buf, BUF_SIZE, RPL_NAMREPLY, SERVER_NAME,
-                     sender_nick, channel_param, nick_list);
-
-        send_string(sender_fd, reply_buf, strlen(reply_buf));
-
-        nick_list[0] = '\0';
-      }
-
-      strcat(nick_list, formatted_nick);
-
-      channel_user = channel_user->next;
-    }
-
-    // Send any remaining contents of the nick list
-    if (nick_list[0] != '\0') {
-      format_reply(reply_buf, BUF_SIZE, RPL_NAMREPLY, SERVER_NAME, sender_nick,
-                   channel_param, nick_list);
-
-      send_string(sender_fd, reply_buf, strlen(reply_buf));
-    }
-  }
-
-  // Handle formatting for parameterless NAMES commands
-  channel_param = channel_param != NULL ? channel_param : "*";
-
-  format_reply(reply_buf, BUF_SIZE, RPL_ENDOFNAMES, SERVER_NAME, sender_nick,
-               channel_param);
-
-  send_string(sender_fd, reply_buf, strlen(reply_buf));
-
   return 0;
 }
 
