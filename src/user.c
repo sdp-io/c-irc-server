@@ -29,6 +29,12 @@ int get_registered_user_count(void) { return registered_user_count; }
 
 int user_get_oper_count(void) { return operator_user_count; }
 
+void user_set_registered(struct User *target_user) {
+  target_user->is_registered = true;
+  registered_user_count++;
+  unknown_user_count--;
+}
+
 void user_set_operator_status(struct User *target_user, bool status) {
   if (status) {
     target_user->is_oper = true;
@@ -242,35 +248,9 @@ static void relay_nick_change(struct User *sender_user, char *old_nick,
   }
 }
 
-int set_user_nick(int sender_fd, char *sender_nick) {
+void set_user_nick(struct User *sender_user, char *sender_nick) {
   // Buffer to send the corresponding numeric reply back to the sending user
-  char reply_buf[BUF_SIZE];
   char old_nick[MAX_NICK_LEN + 1]; // Space for null-terminator
-  struct User *sender_user = get_user_by_fd(sender_fd);
-
-  // If nick contains invalid characters, do not need to verify its availability
-  if (!is_valid_nick(sender_nick)) {
-    // Format and send ERR_ERRONEOUSNICKNAME numeric reply
-    char *current_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
-
-    format_reply(reply_buf, BUF_SIZE, ERR_ERRONEOUSNICKNAME, SERVER_NAME,
-                 current_nick, sender_nick);
-
-    send_string(sender_fd, reply_buf, strlen(reply_buf));
-
-    return -1;
-  }
-
-  if (get_user_by_nick(sender_nick) != NULL) {
-    // Specified nick is taken, format and send ERR_NICKNAMEINUSE numeric
-    char *current_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
-
-    format_reply(reply_buf, BUF_SIZE, ERR_NICKNAMEINUSE, SERVER_NAME,
-                 current_nick, sender_nick);
-    send_string(sender_fd, reply_buf, strlen(reply_buf));
-
-    return -1;
-  }
 
   // If sender has a pre-existing nick, free it and remove from the nick table
   // as well as relay the change to all of the sender's actively joined channels
@@ -289,77 +269,15 @@ int set_user_nick(int sender_fd, char *sender_nick) {
   sender_user->nick = strdup(sender_nick);
   sender_user->has_nick = true;
 
-  bool has_nick = sender_user->has_nick;
-  bool has_username = sender_user->has_username;
-  bool is_registered = sender_user->is_registered;
-
   HASH_ADD_KEYPTR(hh_nick, users_nick_map, sender_user->nick,
                   strlen(sender_user->nick), sender_user);
-
-  // User successfully registered, change registration status and send
-  // RPL_WELCOME
-  if (has_nick && has_username && !is_registered) {
-    sender_user->is_registered = true;
-    registered_user_count++;
-    unknown_user_count--;
-
-    char *nick = sender_user->nick;
-    char *username = sender_user->user_name;
-    char *host_name = sender_user->host_name;
-
-    char reply_buf[BUF_SIZE];
-    format_reply(reply_buf, BUF_SIZE, RPL_WELCOME, SERVER_NAME, nick, nick,
-                 username, host_name);
-    send_string(sender_fd, reply_buf, strlen(reply_buf));
-  }
-
-  return 0;
 }
 
-void set_user_username(int sender_fd, char *user_param, char *mode_param,
+void set_user_username(struct User *sender_user, char *user_param,
                        char *realname_param) {
-  // Verify integrity of the provided parameters
-  if (user_param == NULL || mode_param == NULL || realname_param == NULL) {
-    return;
-  }
-
-  struct User *sender_user = get_user_by_fd(sender_fd);
-
-  // Sending user has a pre-existing username, format and send numeric reply
-  if (sender_user->user_name != NULL || sender_user->real_name != NULL) {
-    char reply_buf[BUF_SIZE];
-    char *current_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
-    format_reply(reply_buf, BUF_SIZE, ERR_ALREADYREGISTERED, SERVER_NAME,
-                 current_nick);
-    send_string(sender_fd, reply_buf, strlen(reply_buf));
-    return;
-  }
-
-  // Adjust state of sending user's User struct
   sender_user->user_name = strdup(user_param);
   sender_user->real_name = strdup(realname_param);
   sender_user->has_username = true;
-
-  bool has_nick = sender_user->has_nick;
-  bool has_username = sender_user->has_username;
-  bool is_registerd = sender_user->is_registered;
-
-  // User successfully registered, change registration status and send
-  // RPL_WELCOME
-  if (has_nick && has_username && !is_registerd) {
-    sender_user->is_registered = true;
-    registered_user_count++;
-    unknown_user_count--;
-
-    char *nick = sender_user->nick;
-    char *username = sender_user->user_name;
-    char *host_name = sender_user->host_name;
-
-    char reply_buf[BUF_SIZE];
-    format_reply(reply_buf, BUF_SIZE, RPL_WELCOME, SERVER_NAME, nick, nick,
-                 username, host_name);
-    send_string(sender_fd, reply_buf, strlen(reply_buf));
-  }
 }
 
 void user_add_channel(struct User *user, struct Channel *new_channel) {

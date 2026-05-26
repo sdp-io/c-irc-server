@@ -9,6 +9,35 @@
 #include <string.h>
 #include <strings.h>
 
+int handle_lusers_cmd(int sender_fd);
+
+int handle_motd_cmd(int sender_fd);
+
+/*
+ * Helper function that updates a user's registration status, server state, as
+ * well as sending the appropriate numeric replies to the newly registered user.
+ * Called when a user is found to be registered after setting their nickname or
+ * username.
+ */
+static void register_new_user(struct User *user) {
+  char reply_buf[BUF_SIZE];
+
+  user_set_registered(user);
+
+  char *nick = user->nick;
+  char *username = user->user_name;
+  char *host_name = user->host_name;
+
+  format_reply(reply_buf, BUF_SIZE, RPL_WELCOME, SERVER_NAME, nick, nick,
+               username, host_name);
+
+  send_string(user->user_fd, reply_buf, strlen(reply_buf));
+
+  // Send MOTD and LUSERS replies
+  handle_lusers_cmd(user->user_fd);
+  handle_motd_cmd(user->user_fd);
+}
+
 /*
  * Helper function called by the PRIVMSG+NOTICE handler. Called when the target
  * of the message is a channel. Attempts to relay the provided message to all of
@@ -152,6 +181,86 @@ int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
     handle_privmsg_channel(sender_user, recipient_nick, message, is_notice);
   } else { // Message target is a user
     handle_privmsg_user(sender_user, recipient_nick, message, is_notice);
+  }
+
+  return 0;
+}
+
+int handle_nick_cmd(int sender_fd, char *nick_param) {
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char reply_buf[BUF_SIZE];
+
+  // If nick contains invalid characters, do not need to verify its availability
+  if (!is_valid_nick(nick_param)) {
+    // Format and send ERR_ERRONEOUSNICKNAME numeric reply
+    char *current_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
+
+    format_reply(reply_buf, BUF_SIZE, ERR_ERRONEOUSNICKNAME, SERVER_NAME,
+                 current_nick, nick_param);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+    return -1;
+  }
+
+  // If specified nick is taken, format and send ERR_NICKNAMEINUSE numeric
+  if (get_user_by_nick(nick_param) != NULL) {
+    char *current_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
+
+    format_reply(reply_buf, BUF_SIZE, ERR_NICKNAMEINUSE, SERVER_NAME,
+                 current_nick, nick_param);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+
+    return -1;
+  }
+
+  // Specified nick is available and valid
+  set_user_nick(sender_user, nick_param);
+
+  // Check if user is now newly registered
+  bool has_nick = sender_user->has_nick;
+  bool has_username = sender_user->has_username;
+  bool is_registered = sender_user->is_registered;
+
+  if (has_nick && has_username && !is_registered) {
+    register_new_user(sender_user);
+  }
+
+  return 0;
+}
+
+int handle_user_cmd(int sender_fd, char *user_param, char *mode_param,
+                    char *realname_param) {
+  struct User *sender_user = get_user_by_fd(sender_fd);
+  char reply_buf[BUF_SIZE];
+
+  // Verify integrity of the provided parameters
+  if (user_param == NULL || mode_param == NULL || realname_param == NULL) {
+    return -1;
+  }
+
+  // Sending user has a pre-existing username, format and send numeric reply
+  if (sender_user->user_name != NULL || sender_user->real_name != NULL) {
+    char *current_nick = (sender_user->nick != NULL) ? sender_user->nick : "*";
+
+    format_reply(reply_buf, BUF_SIZE, ERR_ALREADYREGISTERED, SERVER_NAME,
+                 current_nick);
+
+    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    return -1;
+  }
+
+  // Specified username and parameters are valid
+  set_user_username(sender_user, user_param, realname_param);
+
+  // Check if user is now newly registered
+  bool has_nick = sender_user->has_nick;
+  bool has_username = sender_user->has_username;
+  bool is_registered = sender_user->is_registered;
+
+  if (has_nick && has_username && !is_registered) {
+    register_new_user(sender_user);
   }
 
   return 0;
@@ -1233,7 +1342,7 @@ void handle_user_msg(int sender_fd, char *buf) {
 
     if ((strcasecmp(user_cmd, "NICK")) == 0) {
       char *nick_param = strtok_r(NULL, " ", &inner_saveptr);
-      set_user_nick(sender_fd, nick_param);
+      handle_nick_cmd(sender_fd, nick_param);
     } else if ((strcasecmp(user_cmd, "USER")) == 0) {
       char *user_param = strtok_r(NULL, " ", &inner_saveptr);
       char *mode_param = strtok_r(NULL, " ", &inner_saveptr);
@@ -1248,7 +1357,7 @@ void handle_user_msg(int sender_fd, char *buf) {
         realname_param++;
       }
 
-      set_user_username(sender_fd, user_param, mode_param, realname_param);
+      handle_user_cmd(sender_fd, user_param, mode_param, realname_param);
     } else if (is_privmsg || is_notice) {
       char *recipient_param = strtok_r(NULL, " ", &inner_saveptr);
       char *message_param = strtok_r(NULL, "", &inner_saveptr);

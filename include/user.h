@@ -21,24 +21,17 @@ extern int add_to_users(int user_fd, char *user_host);
 extern void del_from_users(int user_fd);
 
 /*
- * Handle the setting of a user's nickname on the server. Iterates through
- * the list of active users on the server to ensure nickname availability.
- * Frees the memory allocated to the user's previous nickname (if applicable)
- * then allocates memory to the new nickname and assigns it to the user's
- * corresponding User struct.
- *
- * Returns 0 on success and -1 on failure.
+ * Updates a user's nickname, allocating memory to it and adding it to the user
+ * nick hashtable. Frees memory for any pre-existing nicknames and removes it
+ * from the hashtable before assigning the new nickname.
  */
-extern int set_user_nick(int user_fd, char *sender_nick);
+extern void set_user_nick(struct User *sender_user, char *sender_nick);
 
 /*
- * Handle the setting of a user's username on the server. Handles the sending of
- * the numeric reply ERR_ALREADYREGISTERED when the sending user has a
- * pre-existing username and real name. Allocates memory to the newly
- * provided username and real name and assigns them to the corresponding User
- * struct for the sending user.
+ * Updates a user's username and realname, allocating memory to it as well as
+ * setting the user's has_username field to true.
  */
-extern void set_user_username(int user_fd, char *user_param, char *mode_param,
+extern void set_user_username(struct User *sender_user, char *user_param,
                               char *realname_param);
 
 /*
@@ -103,6 +96,12 @@ extern int get_unknown_user_count(void);
  * Return the number of registered users currently connected to the server.
  */
 extern int get_registered_user_count(void);
+
+/*
+ * Sets a user's registration status to true, and updates the unknown and
+ * registered user counts on the server.
+ */
+extern void user_set_registered(struct User *target_user);
 
 /*
  * Allocates memory for a ChannelNode struct to contain the provided channel and
