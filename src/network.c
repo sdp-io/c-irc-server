@@ -255,9 +255,9 @@ void process_connections(int listener, int *fd_count, int *fd_size,
 }
 
 int send_string(int fd, char *buf, size_t size) {
-  int NO_FLAGS = 0;
-
-  if (send(fd, buf, size, NO_FLAGS) == -1) {
+  // NOTE: Ignores write attempts to closed sockets to prevent SIGPIPE signal
+  // from crashing the server.
+  if (send(fd, buf, size, MSG_NOSIGNAL) == -1) {
     fprintf(stderr, "send_string: failed to send %zu bytes to fd %d\n", size,
             fd);
     return -1;
