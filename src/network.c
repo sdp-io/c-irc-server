@@ -16,6 +16,8 @@
 
 #define PORT "9034" // Defined port that we will be listening on
 
+static int BACKLOG_SIZE = 512;
+
 const char *inet_ntop2(void *addr, char *buf, size_t size) {
   // Initialize sockaddr_storage for passed socket param, as well as for IPv4
   // and IPv6 types
@@ -91,7 +93,7 @@ int get_listener_socket(void) {
   freeaddrinfo(ai); // Finished with set of addresses provided by getaddrinfo()
 
   // Begin listening to listener socket
-  if (listen(listener, 10) == -1) {
+  if (listen(listener, BACKLOG_SIZE) == -1) {
     return -1;
   }
 
