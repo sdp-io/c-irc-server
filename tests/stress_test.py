@@ -1,7 +1,8 @@
 import asyncio
+from draw_graph import draw_graph
 from time import perf_counter
 
-N = 10000
+N_LIST = [100, 500, 1000, 2000, 3000, 5000, 7500, 10000]
 
 LOCALHOST = "127.0.0.1"
 PORT = 9034
@@ -56,55 +57,60 @@ async def create_user(address, port, user_nick):
 
 
 async def main():
-    tasks = []
+    benchmarks = []
 
-    # Context manager for automated tests, create N number of users
-    async with asyncio.TaskGroup() as tg:
+    for N in N_LIST:
+        tasks = []
+
+        # Context manager for automated tests, create N number of users
+        async with asyncio.TaskGroup() as tg:
+            for i in range(N):
+                current_nick = f"User_{N}_{i}"
+                task = tg.create_task(create_user(LOCALHOST, PORT, current_nick))
+                tasks.append(task)
+                await asyncio.sleep(
+                    0.001
+                )  # Buffer to prevent kernel from dropping packets
+
+        users = [task.result() for task in tasks]
+
+        # Join N number of users to specified channel
+        async with asyncio.TaskGroup() as tg:
+            for i in range(N):
+                task = tg.create_task(join_channel(users[i][0], users[i][1], CHANNEL))
+
+        # Have first user in the list of users message the channel
+        send_task = asyncio.create_task(send_message(users[0][1]))
+        recv_tasks = []
+
+        # Since sender is the first user in the list, start counting from 1
+        for i in range(1, N):
+            recv_tasks.append(asyncio.create_task(recv_message(users[i][0])))
+
+        start = perf_counter()
+
+        await send_task
+        await asyncio.gather(*recv_tasks)
+
+        end = perf_counter()
+        elapsed_ms = (end - start) * 1000
+
+        benchmarks.append(elapsed_ms)
+        print(f"Elapsed: {elapsed_ms:.2f} ms")
+
         for i in range(N):
-            current_nick = "user_" + str(i)
-            task = tg.create_task(create_user(LOCALHOST, PORT, current_nick))
-            tasks.append(task)
+            users[i][1].write(b"QUIT :Benchmark over\r\n")
+            users[i][1].close()
+            await users[i][1].wait_closed()
             await asyncio.sleep(0.001)  # Buffer to prevent kernel from dropping packets
+            # NOTE: As every user is quitting simultaneously the QUIT relay is O(n^2)
+            # so it must be delayed to prevent flooding
 
-    # print("Completed without error!")
-    # print("Closing connections...")
+        if N > 3000:
+            # Sleep to give server time to process QUIT messages
+            await asyncio.sleep(1)
 
-    users = [task.result() for task in tasks]
-
-    # Join N number of users to specified channel
-    async with asyncio.TaskGroup() as tg:
-        for i in range(N):
-            task = tg.create_task(join_channel(users[i][0], users[i][1], CHANNEL))
-
-    # Have first user in the list of users message the channel
-    send_task = asyncio.create_task(send_message(users[0][1]))
-    recv_tasks = []
-
-    # Since sender is the first user in the list, start counting from 1
-    for i in range(1, N):
-        recv_tasks.append(asyncio.create_task(recv_message(users[i][0])))
-
-    start = perf_counter()
-
-    await send_task
-    await asyncio.gather(*recv_tasks)
-
-    end = perf_counter()
-    elapsed_ms = (end - start) * 1000
-
-    print(f"Elapsed: {elapsed_ms:.2f} ms")
-
-    # TODO: Optional message ALL users test
-    # async with asyncio.TaskGroup() as tg:
-    #     for i in range(n):
-    #         send_task = tg.create_task(
-    #             send_message(users[i][1], channel, f"test message {i}")
-    #         )
-
-    for i in range(N):
-        users[i][1].write(b"QUIT :Benchmark over\r\n")
-        users[i][1].close()
-        await users[i][1].wait_closed()
+    draw_graph(N_LIST, benchmarks)
 
 
 if __name__ == "__main__":
