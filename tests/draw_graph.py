@@ -10,6 +10,6 @@ def draw_graph(x_points, y_points):
     pyplot.xlabel("Number of Users")
     pyplot.ylabel("Milliseconds")
 
-    pyplot.title("CIRC poll() Benchmark")
+    pyplot.title("CIRC epoll() Benchmark")
 
     pyplot.savefig("benchmark_results.png")

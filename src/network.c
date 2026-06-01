@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -100,58 +101,49 @@ int get_listener_socket(void) {
   return listener;
 }
 
-void add_to_pfds(struct pollfd **pfds, int newfd, int *fd_count, int *fd_size) {
-  // If the poll file descriptor set is at max capacity, allocate more space
-  if (*fd_count == *fd_size) {
-    *fd_size *= 2; // Double the current size
-    *pfds = realloc(*pfds, sizeof(**pfds) * (*fd_size));
-  }
+int add_to_epfd(int epfd, int new_fd) {
+  struct epoll_event ctl_event = {.events = EPOLLIN, .data = {.fd = new_fd}};
+  int epoll_ctl_status = epoll_ctl(epfd, EPOLL_CTL_ADD, new_fd, &ctl_event);
 
-  (*pfds)[*fd_count].fd = newfd;
-  (*pfds)[*fd_count].events = POLLIN; // Check ready-to-read status
-  (*pfds)[*fd_count].revents = 0;
-
-  (*fd_count)++;
+  return epoll_ctl_status;
 }
 
-void del_from_pfds(struct pollfd pfds[], int i, int *fd_count) {
-  // Copy the last file descriptor to the current index and decrement fd_count
-  pfds[i] = pfds[*fd_count - 1];
-  (*fd_count)--;
+void del_from_epfd(int epfd, int old_fd) {
+  epoll_ctl(epfd, EPOLL_CTL_DEL, old_fd, NULL);
 }
 
-void handle_new_connection(int listener, int *fd_count, int *fd_size,
-                           struct pollfd **pfds) {
+void handle_new_connection(int listener, int epfd) {
   struct sockaddr_storage remoteaddr; // Incoming address
   socklen_t addrlen;
-  int newfd; // Newly accepted socket descriptor
+  int new_fd; // Newly accepted socket descriptor
   char remoteIP[INET6_ADDRSTRLEN];
 
   addrlen = sizeof(remoteaddr);
-  newfd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen);
+  new_fd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen);
 
-  if (newfd == -1) {
+  if (new_fd == -1) {
     perror("accept");
   } else {
     // Add to users list, currently no NICK for user so set to NULL
     inet_ntop2(&remoteaddr, remoteIP, sizeof remoteIP);
-    if (add_to_users(newfd, remoteIP) == -1) {
+    if (add_to_users(new_fd, remoteIP) == -1) {
       fprintf(stderr, "Server full or OOM, rejecting connection from %d\n",
-              newfd);
-      close(newfd); // Close attempted connection as user malloc failed
+              new_fd);
+      close(new_fd); // Close attempted connection as user malloc failed
       return;
     }
 
-    // Valid fd and successfully added to users, therefore add to pfds
-    add_to_pfds(pfds, newfd, fd_count, fd_size);
-
-    printf("pollserver: new connection from %s on socket %d\n", remoteIP,
-           newfd);
+    // Valid fd and successfully added to users, therefore attempt to add
+    if (add_to_epfd(epfd, new_fd) != -1) {
+      printf("irc: new connection from %s on socket %d\n", remoteIP, new_fd);
+    } else {
+      printf("irc: unable to accept connection from %s on socket %d\n",
+             remoteIP, new_fd);
+    }
   }
 }
 
-void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
-  int sender_fd = pfds[*pfd_i].fd;
+void handle_client_data(int sender_fd, int epfd) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_buf = user_get_buf(sender_fd);
   int sender_buf_len = user_get_buf_len(sender_fd);
@@ -175,10 +167,7 @@ void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
     // Close the client socket and remove from pollfds
     close(sender_fd);
     del_from_users(sender_fd);
-    del_from_pfds(pfds, *pfd_i, fd_count);
-
-    // Decrement the pfd iterator to rexamine the slot we just deleted
-    (*pfd_i)--;
+    del_from_epfd(epfd, sender_fd);
   } else { // Received some good data from the client
     printf("pollserver: recv from fd %d: %.*s\n", sender_fd, nbytes,
            sender_buf);
@@ -199,9 +188,7 @@ void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
         if (sender_user->is_dead) {
           close(sender_fd);
           del_from_users(sender_fd);
-          del_from_pfds(pfds, *pfd_i, fd_count);
-
-          (*pfd_i)--;
+          del_from_epfd(epfd, sender_fd);
           return;
         }
 
@@ -221,9 +208,7 @@ void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
         if (sender_user->is_dead) {
           close(sender_fd);
           del_from_users(sender_fd);
-          del_from_pfds(pfds, *pfd_i, fd_count);
-
-          (*pfd_i)--;
+          del_from_epfd(epfd, sender_fd);
           return;
         }
 
@@ -238,21 +223,13 @@ void handle_client_data(int *fd_count, struct pollfd *pfds, int *pfd_i) {
   }
 }
 
-void process_connections(int listener, int *fd_count, int *fd_size,
-                         struct pollfd **pfds) {
-  for (int i = 0; i < *fd_count; i++) {
-    // Check if someone is ready to be read
-    if ((*pfds)[i].revents & (POLLIN | POLLHUP)) {
-      // Found one!
-
-      if ((*pfds)[i].fd == listener) {
-        // If the listener is ready to read, we are receiving a new connection.
-        handle_new_connection(listener, fd_count, fd_size, pfds);
-      } else {
-        // Else it is a client sending data
-        handle_client_data(fd_count, *pfds, &i);
-      }
-    }
+void process_connections(int listener, int epfd, struct epoll_event *event) {
+  if (event->data.fd == listener) {
+    // If the listener is ready to read, we are receiving a new connection.
+    handle_new_connection(listener, epfd);
+  } else {
+    // Else it is a client sending data
+    handle_client_data(event->data.fd, epfd);
   }
 }
 

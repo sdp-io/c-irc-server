@@ -3,13 +3,14 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/poll.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+static int MAX_EVENTS = 10;
 
 char *oper_password = NULL;
 
@@ -19,15 +20,7 @@ char *oper_password = NULL;
  * the placement of the subsequent listener socket into the set of polling file
  * descriptors.
  */
-int init_pfds(struct pollfd **pfds, int *fd_size, int *fd_count,
-              int *listener) {
-  // Begin with enough room for 5 total connections
-  // When capacity is reached, will realloc()
-  *fd_size = 5;
-  *fd_count = 0;
-
-  *pfds = malloc(sizeof **pfds * (*fd_size));
-
+int init_pfds(int *epfd, int *listener) {
   // Set up and get a listening socket
   *listener = get_listener_socket();
 
@@ -35,12 +28,15 @@ int init_pfds(struct pollfd **pfds, int *fd_size, int *fd_count,
     return -1;
   }
 
-  // Add the listener to the set of connections.
-  // Report ready to read when receiving an incoming connection
-  (*pfds)[0].fd = *listener;
-  (*pfds)[0].events = POLLIN;
+  // Create the epoll instance and add the server to it, listening for new
+  // connections
+  *epfd = epoll_create1(0);
 
-  *fd_count = 1; // Increment to account for the listener.
+  struct epoll_event ctl_event = {.events = EPOLLIN, .data = {.fd = *listener}};
+  int epoll_ctl_status = epoll_ctl(*epfd, EPOLL_CTL_ADD, *listener, &ctl_event);
+  if (epoll_ctl_status == -1) {
+    return -1;
+  }
 
   return 0;
 }
@@ -51,9 +47,7 @@ int init_pfds(struct pollfd **pfds, int *fd_size, int *fd_count,
  */
 int main(int argc, char **argv) {
   int listener; // Listening socket file descriptor
-  int fd_size;  // Capacity for pfds
-  int fd_count; // Total fds currently in pfds
-  struct pollfd *pfds;
+  int epfd;
 
   // Invalid argument amount
   if (argc > 2 || argc < 2) {
@@ -62,7 +56,7 @@ int main(int argc, char **argv) {
   }
   oper_password = argv[1];
 
-  if (init_pfds(&pfds, &fd_size, &fd_count, &listener) == -1) {
+  if (init_pfds(&epfd, &listener) == -1) {
     fprintf(stderr, "main: error getting listening socket\n");
     exit(EXIT_FAILURE);
   }
@@ -71,17 +65,11 @@ int main(int argc, char **argv) {
 
   // Main polling loop
   for (;;) {
-    int poll_count = poll(pfds, fd_count, -1);
-
-    if (poll_count == -1) {
-      perror("main: poll");
-      exit(EXIT_FAILURE);
-    }
+    struct epoll_event events[10];
+    epoll_wait(epfd, events, MAX_EVENTS, -1);
 
     // Iterate through connections within the set of poll fds looking for data
     // to read
-    process_connections(listener, &fd_count, &fd_size, &pfds);
+    process_connections(listener, epfd, events);
   }
-
-  free(pfds);
 }
