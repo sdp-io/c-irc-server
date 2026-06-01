@@ -269,11 +269,8 @@ int handle_user_cmd(int sender_fd, char *user_param, char *mode_param,
 int handle_ping_cmd(int sender_fd, char *message) {
   char reply_buf[BUF_SIZE];
 
-  // Send ERR_NOORIGIN
   if (message == NULL) {
-    format_reply(reply_buf, BUF_SIZE, ERR_NOORIGIN, SERVER_NAME);
-
-    send_string(sender_fd, reply_buf, strlen(reply_buf));
+    message = "";
   }
 
   format_reply(reply_buf, BUF_SIZE, FMT_PING, SERVER_NAME, SERVER_NAME,
