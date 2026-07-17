@@ -1,13 +1,14 @@
 # c-irc-server
+
 A standalone RFC 1459 compliant IRC Server written in C99 which implements all commands required to communicate, interface with channels, and check server + channel status. Created for educational purposes as an exploration into networking, memory management, and the C language.
 
 ## Features
+
 This project supports numerous commands required for chatting, channel access, channel + user mode modification, operator access, as well as a modifiable Message of the Day (MOTD) file that may be set as needed.  
 
-After testing, the server was refactored from a `poll()`-based implementation to an `epoll()`-based implementation after researching historic problems with scaling (The C10k Problem) that plagued IRC implementations in the 90's. Due to this, the server can concurrently support 10k users with minimal latency loss (as long as they are not all in the same channel, due to the nature of relaying messages through channels.) 
+After testing, the server was refactored from a `poll()`-based implementation to an `epoll()`-based implementation after researching historic problems with scaling (The C10k Problem) that plagued IRC implementations in the 90's. Due to this, the server can concurrently support 10k users with minimal latency loss (as long as they are not all in the same channel, due to the nature of relaying messages through channels.)
 
 A full overview of the commands implemented by the IRC server itself can be viewed by observing the numeric replies in `messages.h`.
-
 
 ## Performance
 
@@ -15,10 +16,12 @@ As I neared the end of development, I became interested in the process of scalin
 loops as the Internet continued to develop. After researching this, I noticed the stark different in performance between `poll()` and `epoll()`, and became interested in graphing and documenting this performance change on my Linux machine, as I was unable to find
 similar educational demonstrations online. This graph, of the before and after performance from both implementations on this project can be seen below:
 
-`TODO: Add graph`
+![poll vs epoll graph](demo/benchmark_results_poll_vs_epoll.png)
 
 ## Usage
+
 ### Prerequisites
+
 * **Linux:** This server relies on `epoll()`, which is a Linux-specific I/O event polling system call. Therefore it will only function on a Linux system.
 * **C Compiler:** GCC or Clang is OK, as long as it supports C99.
 * **Make:** For building the project.
@@ -26,17 +29,20 @@ similar educational demonstrations online. This graph, of the before and after p
 ### Build and Run
 
 1. Clone the repository and navigate to the project directory:
+
    ```bash
    git clone https://github.com/YourUsername/c-irc-server.git
    cd c-irc-server
    ```
 
 2. Compile the server using `make`:
+
    ```bash
    make
    ```
 
 3. Run the executable, passing your desired server operator password as the single argument:
+
    ```bash
    ./circ [operator_pass]
    ```
