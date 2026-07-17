@@ -12,6 +12,9 @@ TEST_MESSAGE = "test message"
 PRIVMSG_TEMPLATE = f"PRIVMSG {CHANNEL} :{TEST_MESSAGE}\r\n".encode()
 
 
+stream_lock = asyncio.Lock()
+
+
 async def recv_message(reader):
     # If message is never received, program will not terminate
     await reader.readuntil(PRIVMSG_TEMPLATE)
@@ -20,6 +23,14 @@ async def recv_message(reader):
 async def send_message(writer):
     writer.write(PRIVMSG_TEMPLATE)
     await writer.drain()
+
+
+async def send_ping(reader, writer, message):
+    writer.write(f"PING :{message}\r\n".encode("utf-8"))
+    await writer.drain()
+
+    async with stream_lock:
+        await reader.readuntil("\r\n".encode("utf-8"))
 
 
 async def join_channel(reader, writer, channel_name):
@@ -79,18 +90,23 @@ async def main():
             for i in range(N):
                 task = tg.create_task(join_channel(users[i][0], users[i][1], CHANNEL))
 
-        # Have first user in the list of users message the channel
-        send_task = asyncio.create_task(send_message(users[0][1]))
-        recv_tasks = []
+        # # Have first user in the list of users message the channel
+        # send_task = asyncio.create_task(send_message(users[0][1]))
+        ping_tasks = []
+
+        await asyncio.sleep(1)
 
         # Since sender is the first user in the list, start counting from 1
-        for i in range(1, N):
-            recv_tasks.append(asyncio.create_task(recv_message(users[i][0])))
+        for i in range(N):
+            ping_tasks.append(
+                asyncio.create_task(
+                    send_ping(users[-1][0], users[-1][1], f"User_{N}_{i}")
+                )
+            )
 
         start = perf_counter()
 
-        await send_task
-        await asyncio.gather(*recv_tasks)
+        await asyncio.gather(*ping_tasks)
 
         end = perf_counter()
         elapsed_ms = (end - start) * 1000
@@ -102,7 +118,9 @@ async def main():
             users[i][1].write(b"QUIT :Benchmark over\r\n")
             users[i][1].close()
             await users[i][1].wait_closed()
-            await asyncio.sleep(0.001)  # Buffer to prevent kernel from dropping packets
+            await asyncio.sleep(
+                0.0001
+            )  # Buffer to prevent kernel from dropping packets
             # NOTE: As every user is quitting simultaneously the QUIT relay is O(n^2)
             # so it must be delayed to prevent flooding
 
