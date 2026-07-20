@@ -64,6 +64,15 @@ static void handle_privmsg_channel(struct User *sender_user,
   struct UserNode *sender_member =
       channel_get_member(target_channel, sender_user);
 
+  // By default users cannot message channels in which they are not members
+  if (sender_member == NULL) {
+    format_reply(reply_buf, BUF_SIZE, ERR_CANNOTSENDTOCHAN, SERVER_NAME,
+                 sender_user->nick, recipient_channel);
+
+    send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
+    return;
+  }
+
   bool sender_has_voice = sender_user->is_oper || sender_member->channel_op ||
                           sender_member->channel_voice;
 

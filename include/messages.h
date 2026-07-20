@@ -373,6 +373,23 @@
 #define ERR_NOSUCHCHANNEL ":%s 403 %s %s :No such channel\r\n"
 
 /*
+ * 404 ERR_CANNOTSENDTOCHAN
+ * Returned when a user tries to send a private message (PRIVMSG)
+ * to a channel but is blocked from doing so.
+ *
+ * This occurs if either:
+ *  (a) The user is not currently a member of the channel (mode +n).
+ *  (b) The channel is moderated (mode +m) and the user is neither
+ *      a Channel Operator (+o) nor possesses Voice privileges (+v).
+ *
+ * Format Args:
+ *  1. Server Name
+ *  2. Target Nickname
+ *  3. Channel Name
+ */
+#define ERR_CANNOTSENDTOCHAN ":%s 404 %s %s :Cannot send to channel\r\n"
+
+/*
  * Returned when a PONG command is sent without a corresponding server/message
  * parameter.
  *
