@@ -80,7 +80,7 @@ static void handle_privmsg_channel(struct User *sender_user,
   // send numeric if command called is not a NOTICE
   if (target_channel->moderated_mode && !sender_has_voice) {
     if (!is_notice) {
-      format_reply(reply_buf, BUF_SIZE, ERR_CHANOPRIVSNEEDED, SERVER_NAME,
+      format_reply(reply_buf, BUF_SIZE, ERR_CANNOTSENDTOCHAN, SERVER_NAME,
                    sender_user->nick, recipient_channel);
 
       send_string(sender_user->user_fd, reply_buf, strlen(reply_buf));
