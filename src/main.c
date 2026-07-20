@@ -20,7 +20,7 @@ char *oper_password = NULL;
  * the placement of the subsequent listener socket into the set of polling file
  * descriptors.
  */
-int init_pfds(int *epfd, int *listener) {
+static int init_epfd(int *epfd, int *listener) {
   // Set up and get a listening socket
   *listener = get_listener_socket();
 
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
   }
   oper_password = argv[1];
 
-  if (init_pfds(&epfd, &listener) == -1) {
+  if (init_epfd(&epfd, &listener) == -1) {
     fprintf(stderr, "main: error getting listening socket\n");
     exit(EXIT_FAILURE);
   }

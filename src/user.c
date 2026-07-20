@@ -1,3 +1,4 @@
+#include "user.h"
 #include "channel.h"
 #include "hashmap.h"
 #include "messages.h"

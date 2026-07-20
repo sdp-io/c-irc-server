@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Wpedantic -O3 -std=gnu99 -I./include -I./lib
+CFLAGS = -Wall -Wextra -Wpedantic -Wstrict-prototypes -Wmissing-prototypes -O3 -std=gnu99 -I./include -I./lib
 LDFLAGS =
 SRCS = $(wildcard src/*.c)
 OBJ = $(SRCS:.c=.o)

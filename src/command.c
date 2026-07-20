@@ -1,3 +1,4 @@
+#include "command.h"
 #include "channel.h"
 #include "messages.h"
 #include "network.h"
@@ -9,9 +10,9 @@
 #include <string.h>
 #include <strings.h>
 
-int handle_lusers_cmd(int sender_fd);
+static int handle_lusers_cmd(int sender_fd);
 
-int handle_motd_cmd(int sender_fd);
+static int handle_motd_cmd(int sender_fd);
 
 /*
  * Helper function that updates a user's registration status, server state, as
@@ -136,8 +137,13 @@ static void handle_privmsg_user(struct User *sender_user, char *target_nick,
   send_string(target_user->user_fd, reply_buf, strlen(reply_buf));
 }
 
-int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
-                   bool is_notice) {
+/*
+ * Relays a message from the sender to the target recipient. Supports both
+ * PRIVMSG and NOTICE commands. If the is_notice flag is set to true, suppresses
+ * any replies that the sender may receive.
+ */
+static int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
+                          bool is_notice) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nickname = (sender_user->nick != NULL) ? sender_user->nick : "*";
   char reply_buf[BUF_SIZE];
@@ -186,7 +192,7 @@ int handle_msg_cmd(int sender_fd, char *recipient_nick, char *message,
   return 0;
 }
 
-int handle_nick_cmd(int sender_fd, char *nick_param) {
+static int handle_nick_cmd(int sender_fd, char *nick_param) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char reply_buf[BUF_SIZE];
 
@@ -230,8 +236,8 @@ int handle_nick_cmd(int sender_fd, char *nick_param) {
   return 0;
 }
 
-int handle_user_cmd(int sender_fd, char *user_param, char *mode_param,
-                    char *realname_param) {
+static int handle_user_cmd(int sender_fd, char *user_param, char *mode_param,
+                           char *realname_param) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char reply_buf[BUF_SIZE];
 
@@ -266,7 +272,12 @@ int handle_user_cmd(int sender_fd, char *user_param, char *mode_param,
   return 0;
 }
 
-int handle_ping_cmd(int sender_fd, char *message) {
+/*
+ * Receives a PING command from a sender along with a message parameter.
+ * Formats the message into FMT_PING, then relays the PONG response back
+ * to the sending user.
+ */
+static int handle_ping_cmd(int sender_fd, char *message) {
   char reply_buf[BUF_SIZE];
 
   if (message == NULL) {
@@ -280,7 +291,7 @@ int handle_ping_cmd(int sender_fd, char *message) {
   return 0;
 }
 
-void handle_unknown_cmd(int sender_fd, char *command) {
+static void handle_unknown_cmd(int sender_fd, char *command) {
   char reply_buf[BUF_SIZE];
 
   struct User *sender_user = get_user_by_fd(sender_fd);
@@ -292,7 +303,7 @@ void handle_unknown_cmd(int sender_fd, char *command) {
   send_string(sender_fd, reply_buf, strlen(reply_buf));
 }
 
-int handle_motd_cmd(int sender_fd) {
+static int handle_motd_cmd(int sender_fd) {
   FILE *motd_file;
 
   if ((motd_file = fopen("motd.txt", "r")) == NULL) {
@@ -380,7 +391,7 @@ static void send_whois_channels(struct User *sender, struct User *target) {
   }
 }
 
-int handle_whois_cmd(int sender_fd, char *query_nick) {
+static int handle_whois_cmd(int sender_fd, char *query_nick) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char reply_buf[BUF_SIZE];
 
@@ -456,7 +467,7 @@ int handle_whois_cmd(int sender_fd, char *query_nick) {
   return 0;
 }
 
-int handle_lusers_cmd(int sender_fd) {
+static int handle_lusers_cmd(int sender_fd) {
   int unknown_user_count = get_unknown_user_count();
   int registered_user_count = get_registered_user_count();
 
@@ -502,7 +513,7 @@ int handle_lusers_cmd(int sender_fd) {
   return 0;
 }
 
-int handle_names_cmd(int sender_fd, char *channel_param) {
+static int handle_names_cmd(int sender_fd, char *channel_param) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
   char reply_buf[BUF_SIZE];
@@ -582,7 +593,7 @@ int handle_names_cmd(int sender_fd, char *channel_param) {
   return 0;
 }
 
-int handle_join_cmd(int sender_fd, char *channel_name) {
+static int handle_join_cmd(int sender_fd, char *channel_name) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
   char reply_buf[BUF_SIZE];
@@ -643,7 +654,8 @@ int handle_join_cmd(int sender_fd, char *channel_name) {
   return 0;
 }
 
-int handle_part_cmd(int sender_fd, char *channel_name, char *parting_message) {
+static int handle_part_cmd(int sender_fd, char *channel_name,
+                           char *parting_message) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
   char reply_buf[BUF_SIZE];
@@ -675,7 +687,8 @@ int handle_part_cmd(int sender_fd, char *channel_name, char *parting_message) {
   return 0;
 }
 
-int handle_topic_cmd(int sender_fd, char *channel_name, char *topic_message) {
+static int handle_topic_cmd(int sender_fd, char *channel_name,
+                            char *topic_message) {
   char reply_buf[BUF_SIZE];
 
   struct User *sender_user = get_user_by_fd(sender_fd);
@@ -768,7 +781,7 @@ int handle_topic_cmd(int sender_fd, char *channel_name, char *topic_message) {
   return 0;
 }
 
-int handle_oper_cmd(int sender_fd, char *pass_param) {
+static int handle_oper_cmd(int sender_fd, char *pass_param) {
   char reply_buf[BUF_SIZE];
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
@@ -809,7 +822,7 @@ int handle_oper_cmd(int sender_fd, char *pass_param) {
   return -1;
 }
 
-int handle_away_cmd(int sender_fd, char *away_msg) {
+static int handle_away_cmd(int sender_fd, char *away_msg) {
   char reply_buf[BUF_SIZE];
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
@@ -835,7 +848,7 @@ int handle_away_cmd(int sender_fd, char *away_msg) {
   return 0;
 }
 
-int handle_list_cmd(int sender_fd, char *channel_name) {
+static int handle_list_cmd(int sender_fd, char *channel_name) {
   char reply_buf[BUF_SIZE];
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
@@ -887,7 +900,7 @@ int handle_list_cmd(int sender_fd, char *channel_name) {
   return 0;
 }
 
-int handle_who_cmd(int sender_fd, char *mask_param) {
+static int handle_who_cmd(int sender_fd, char *mask_param) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
   char reply_buf[BUF_SIZE];
@@ -989,7 +1002,7 @@ int handle_who_cmd(int sender_fd, char *mask_param) {
   return 0;
 }
 
-int handle_quit_cmd(int sender_fd, char *quit_message) {
+static int handle_quit_cmd(int sender_fd, char *quit_message) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nick = sender_user->nick;
   char *sender_username = sender_user->user_name;
@@ -1023,8 +1036,8 @@ int handle_quit_cmd(int sender_fd, char *quit_message) {
  * Helper function for handle_mode_cmd. Handles the setting of a Channel mode,
  * or a Channel User mode.
  */
-int handle_channel_mode(struct User *sender_user, char *channel_param,
-                        char *mode_param, char *member_param) {
+static int handle_channel_mode(struct User *sender_user, char *channel_param,
+                               char *mode_param, char *member_param) {
   struct Channel *target_channel = get_channel(channel_param);
   char reply_buf[BUF_SIZE];
 
@@ -1210,8 +1223,8 @@ int handle_channel_mode(struct User *sender_user, char *channel_param,
 /*
  * Helper function for handle_mode_cmd. Handles the setting of a User mode only.
  */
-int handle_user_mode(struct User *sender_user, char *user_param,
-                     char *mode_param) {
+static int handle_user_mode(struct User *sender_user, char *user_param,
+                            char *mode_param) {
   char reply_buf[BUF_SIZE];
 
   if (strcasecmp(sender_user->nick, user_param) != 0) {
@@ -1278,8 +1291,8 @@ int handle_user_mode(struct User *sender_user, char *user_param,
 }
 
 // NOTE: Currently only supports one MODE parameter
-int handle_mode_cmd(int sender_fd, char *target_param, char *mode_param,
-                    char *member_param) {
+static int handle_mode_cmd(int sender_fd, char *target_param, char *mode_param,
+                           char *member_param) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_nick = sender_user->nick != NULL ? sender_user->nick : "*";
   char reply_buf[BUF_SIZE];

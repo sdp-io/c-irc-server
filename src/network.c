@@ -1,3 +1,4 @@
+#include "network.h"
 #include "command.h"
 #include "structs.h"
 #include "user.h"
@@ -19,7 +20,10 @@
 
 static int BACKLOG_SIZE = 512;
 
-const char *inet_ntop2(void *addr, char *buf, size_t size) {
+/*
+ * Convert an IPv4 or IPv6 socket to a readable presentation string.
+ */
+static const char *inet_ntop2(void *addr, char *buf, size_t size) {
   // Initialize sockaddr_storage for passed socket param, as well as for IPv4
   // and IPv6 types
   struct sockaddr_storage *sas = addr;
@@ -101,18 +105,29 @@ int get_listener_socket(void) {
   return listener;
 }
 
-int add_to_epfd(int epfd, int new_fd) {
+/*
+ * Add a new file descriptor to the set of file descriptors being polled.
+ */
+static int add_to_epfd(int epfd, int new_fd) {
   struct epoll_event ctl_event = {.events = EPOLLIN, .data = {.fd = new_fd}};
   int epoll_ctl_status = epoll_ctl(epfd, EPOLL_CTL_ADD, new_fd, &ctl_event);
 
   return epoll_ctl_status;
 }
 
-void del_from_epfd(int epfd, int old_fd) {
+/*
+ * Removes a file descriptor from the set of file descriptors being polled.
+ */
+static void del_from_epfd(int epfd, int old_fd) {
   epoll_ctl(epfd, EPOLL_CTL_DEL, old_fd, NULL);
 }
 
-void handle_new_connection(int listener, int epfd) {
+/*
+ * Handle new incoming connections. Adds the new connection to the set of file
+ * descriptor being polled as well as adding the connection to the list of users
+ * currently active on the server.
+ */
+static void handle_new_connection(int listener, int epfd) {
   struct sockaddr_storage remoteaddr; // Incoming address
   socklen_t addrlen;
   int new_fd; // Newly accepted socket descriptor
@@ -143,7 +158,12 @@ void handle_new_connection(int listener, int epfd) {
   }
 }
 
-void handle_client_data(int sender_fd, int epfd) {
+/*
+ * Handle the receiving of regular client data OR client hangups. On client
+ * hangups, removes the client from the list of file descriptors being polled,
+ * as well as from the list of users currently active on the server.
+ */
+static void handle_client_data(int sender_fd, int epfd) {
   struct User *sender_user = get_user_by_fd(sender_fd);
   char *sender_buf = user_get_buf(sender_fd);
   int sender_buf_len = user_get_buf_len(sender_fd);

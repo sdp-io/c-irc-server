@@ -1,3 +1,4 @@
+#include "utils.h"
 #include "structs.h"
 #include <ctype.h>
 #include <stdarg.h>
@@ -9,7 +10,7 @@
  * Given a character, verifies that the character is permitted to
  * act as the first character of a user nickname (See RFC 2812 2.3.1)
  */
-bool is_valid_first_char(char letter) {
+static bool is_valid_first_char(char letter) {
   char *special_chars = "[]\\`_^{|}";
 
   if (strchr(special_chars, letter) != NULL) {

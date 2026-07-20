@@ -1,3 +1,4 @@
+#include "channel.h"
 #include "hashmap.h"
 #include "messages.h"
 #include "network.h"
@@ -78,22 +79,6 @@ void channel_set_mode_topic(struct Channel *target_channel, bool status) {
   }
 }
 
-void channel_member_set_op(struct UserNode *target_member, bool status) {
-  if (status) {
-    target_member->channel_op = true;
-  } else {
-    target_member->channel_op = false;
-  }
-}
-
-void channel_member_set_voice(struct UserNode *target_member, bool status) {
-  if (status) {
-    target_member->channel_voice = true;
-  } else {
-    target_member->channel_voice = false;
-  }
-}
-
 bool channel_has_user(struct Channel *target_channel, struct User *query_user) {
   if (channel_get_member(target_channel, query_user) != NULL) {
     return true;
@@ -104,7 +89,7 @@ bool channel_has_user(struct Channel *target_channel, struct User *query_user) {
 
 // When a channel is JOIN'd that does not exist, this function is called to
 // create it.
-struct Channel *create_channel(char *channel_name) {
+static struct Channel *create_channel(char *channel_name) {
   struct Channel *new_channel = malloc(sizeof(struct Channel));
   if (new_channel == NULL) {
     fprintf(stderr,
@@ -151,7 +136,7 @@ void channel_remove_topic(struct Channel *target_channel) {
   target_channel->topic = NULL;
 }
 
-int channel_add_user(struct Channel *channel, struct User *new_user) {
+static int channel_add_user(struct Channel *channel, struct User *new_user) {
   struct UserNode *new_user_node = malloc(sizeof(struct UserNode));
   if (new_user_node == NULL) {
     fprintf(stderr,
