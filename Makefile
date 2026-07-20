@@ -6,8 +6,8 @@ OBJ = $(SRCS:.c=.o)
 
 all: circ
 
-debug: CFLAGS += -g -fsanitize=address
-debug: LDFLAGS += -fsanitize=address
+debug: CFLAGS += -g -fsanitize=address -fsanitize=undefined
+debug: LDFLAGS += -fsanitize=address -fsanitize=undefined
 debug: circ
 
 circ: $(OBJ)
