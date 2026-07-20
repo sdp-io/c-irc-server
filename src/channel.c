@@ -262,6 +262,11 @@ int join_channel(struct User *joining_user, char *channel_name,
 int handle_part_channel_logic(struct User *parting_user,
                               struct Channel *target_channel,
                               char *parting_message) {
+  // Channel to part does not exist
+  if (target_channel == NULL) {
+    return 0;
+  }
+
   char *channel_name = target_channel->channel_name;
   char numeric_reply_buf[BUF_SIZE];
 
