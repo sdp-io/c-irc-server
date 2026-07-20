@@ -599,7 +599,8 @@ static int handle_join_cmd(int sender_fd, char *channel_name) {
   char reply_buf[BUF_SIZE];
 
   if (channel_name == NULL) {
-    format_reply(reply_buf, BUF_SIZE, ERR_NEEDMOREPARAMS, SERVER_NAME, "JOIN");
+    format_reply(reply_buf, BUF_SIZE, ERR_NEEDMOREPARAMS, SERVER_NAME,
+                 sender_nick, "JOIN");
 
     send_string(sender_fd, reply_buf, strlen(reply_buf));
     return -1;

@@ -262,7 +262,7 @@ int join_channel(struct User *joining_user, char *channel_name,
 int handle_part_channel_logic(struct User *parting_user,
                               struct Channel *target_channel,
                               char *parting_message) {
-  // Channel to part does not exist
+  // Channel to part does not exist, or user is not currently joined to channel
   if (target_channel == NULL) {
     return 0;
   }
